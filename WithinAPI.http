@@ -1,0 +1,19 @@
+@WithinAPI_HostAddress = https://localhost:7071
+
+GET {{WithinAPI_HostAddress}}/api/health
+Accept: application/json
+
+###
+
+POST {{WithinAPI_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@within.local",
+  "password": "within"
+}
+
+###
+
+GET {{WithinAPI_HostAddress}}/api/wellbeing/dashboard
+Accept: application/json
