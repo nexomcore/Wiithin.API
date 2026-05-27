@@ -5,6 +5,8 @@ namespace WithinAPI.Data;
 
 public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) : DbContext(options)
 {
+    public const string Schema = "within";
+
     public DbSet<User> Users => Set<User>();
     public DbSet<Provider> Providers => Set<Provider>();
     public DbSet<Event> Events => Set<Event>();
@@ -25,6 +27,8 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema(Schema);
+
         modelBuilder.HasPostgresEnum<WithinRole>();
         modelBuilder.HasPostgresEnum<WithinLens>();
         modelBuilder.HasPostgresEnum<EventJoinState>();

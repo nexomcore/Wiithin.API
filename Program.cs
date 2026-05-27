@@ -33,7 +33,9 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddDbContext<WithinDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("WithinPostgres")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("WithinPostgres"),
+        postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", WithinDbContext.Schema)));
 builder.Services.AddSingleton<WellbeingScoringService>();
 builder.Services.AddScoped<AuthTokenService>();
 builder.Services.AddEndpointsApiExplorer();
@@ -67,6 +69,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<WithinDbContext>();
+    await db.Database.MigrateAsync();
+    await WithinSeedData.EnsureAsync(db);
+}
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>
@@ -134,8 +144,12 @@ home.MapGet("", async (WithinDbContext db, ClaimsPrincipal principal) =>
     var user = await db.Users.FindAsync(userId);
     if (user is null) return Results.Unauthorized();
 
-    var recommended = await ProjectEvents(db.Events.Where(item => item.Status == EventStatus.Published), db, userId)
-        .OrderBy(item => item.StartUtc)
+    var recommended = await ProjectEvents(
+            db.Events
+                .Where(item => item.Status == EventStatus.Published)
+                .OrderBy(item => item.StartUtc),
+            db,
+            userId)
         .Take(5)
         .ToArrayAsync();
     var communities = await ProjectCommunities(db.Communities, db, userId).Take(3).ToArrayAsync();
@@ -143,16 +157,33 @@ home.MapGet("", async (WithinDbContext db, ClaimsPrincipal principal) =>
             from evt in db.Events
             join reg in db.EventRegistrations on evt.Id equals reg.EventId
             where reg.UserId == userId && reg.State == EventJoinState.Going
+            orderby evt.StartUtc
             select evt,
             db,
             userId)
-        .OrderBy(item => item.StartUtc)
         .Take(3)
         .ToArrayAsync();
 
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var todayCheckIn = await db.DailyCheckIns
+        .Where(item => item.UserId == userId && item.CheckInDate == today)
+        .Select(item => new DailyCheckInDto
+        {
+            Id = item.Id.ToString(),
+            CheckInDate = item.CheckInDate.ToString("yyyy-MM-dd"),
+            MoodScore = item.MoodScore,
+            EnergyScore = item.EnergyScore,
+            StressScore = item.StressScore,
+            ConnectionScore = item.ConnectionScore,
+            MeaningScore = item.MeaningScore,
+            Note = item.Note,
+            DailyBalanceScore = item.DailyBalanceScore
+        })
+        .FirstOrDefaultAsync();
+
     return Results.Ok(new HomeDashboardDto(
         user.ToDto(),
-        null,
+        todayCheckIn,
         recommended,
         communities,
         $"Choose one {user.PreferredLens} action that supports your wellbeing today.",
@@ -216,7 +247,7 @@ events.MapGet("", async (
     if (!string.IsNullOrWhiteSpace(search)) query = query.Where(item => item.Title.ToLower().Contains(search.Trim().ToLower()));
     if (!string.IsNullOrWhiteSpace(tag)) query = query.Where(item => item.Tags.Contains(tag.Trim().ToLower()));
     if (providerId is not null) query = query.Where(item => item.ProviderId == providerId);
-    return Results.Ok(await ProjectEvents(query, db, userId).OrderBy(item => item.StartUtc).ToArrayAsync());
+    return Results.Ok(await ProjectEvents(query.OrderBy(item => item.StartUtc), db, userId).ToArrayAsync());
 });
 
 events.MapGet("/{id:guid}", async (Guid id, WithinDbContext db, ClaimsPrincipal principal) =>

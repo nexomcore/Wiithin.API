@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -13,6 +13,9 @@ namespace WithinAPI.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "within");
+
             migrationBuilder.AlterDatabase()
                 .Annotation("Npgsql:Enum:event_join_state", "interested,going,attended")
                 .Annotation("Npgsql:Enum:event_status", "draft,published,cancelled")
@@ -23,6 +26,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Comments",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -40,6 +44,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Communities",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -57,6 +62,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "CommunityMembers",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -71,6 +77,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "DailyCheckIns",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -91,6 +98,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "DeviceTokens",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -106,6 +114,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "EventRegistrations",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -122,6 +131,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Events",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -150,6 +160,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "MonthlyProfiles",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -169,6 +180,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "NotificationPreferences",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -186,6 +198,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "NotificationSchedules",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -204,6 +217,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Posts",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -221,6 +235,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Providers",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -242,6 +257,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Reactions",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -258,6 +274,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "RefreshTokens",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -274,6 +291,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Reviews",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -290,6 +308,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "SavedEvents",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -304,6 +323,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Users",
+                schema: "within",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -321,6 +341,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.InsertData(
                 table: "Communities",
+                schema: "within",
                 columns: new[] { "Id", "CreatedUtc", "Description", "Lens", "Location", "Name", "ProviderId" },
                 values: new object[,]
                 {
@@ -330,6 +351,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.InsertData(
                 table: "Events",
+                schema: "within",
                 columns: new[] { "Id", "Capacity", "CreatedUtc", "Currency", "Description", "EndUtc", "ExternalBookingUrl", "ImageUrl", "IsOnline", "Lens", "LocationName", "PriceAmount", "ProviderId", "SignupType", "StartUtc", "Status", "Tags", "Title" },
                 values: new object[,]
                 {
@@ -339,6 +361,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.InsertData(
                 table: "Providers",
+                schema: "within",
                 columns: new[] { "Id", "Bio", "CreatedUtc", "InstagramUrl", "IsVerified", "Lens", "Location", "Name", "OwnerUserId", "Slug", "WebsiteUrl" },
                 values: new object[,]
                 {
@@ -348,6 +371,7 @@ namespace WithinAPI.Data.Migrations
 
             migrationBuilder.InsertData(
                 table: "Users",
+                schema: "within",
                 columns: new[] { "Id", "CreatedUtc", "DisplayName", "Email", "PasswordHash", "PreferredLens", "Role" },
                 values: new object[,]
                 {
@@ -359,69 +383,81 @@ namespace WithinAPI.Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_CommunityMembers_CommunityId_UserId",
                 table: "CommunityMembers",
+                schema: "within",
                 columns: new[] { "CommunityId", "UserId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_DeviceTokens_Token",
                 table: "DeviceTokens",
+                schema: "within",
                 column: "Token",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_EventRegistrations_EventId_UserId",
                 table: "EventRegistrations",
+                schema: "within",
                 columns: new[] { "EventId", "UserId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Events_Lens_StartUtc",
                 table: "Events",
+                schema: "within",
                 columns: new[] { "Lens", "StartUtc" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Events_ProviderId",
                 table: "Events",
+                schema: "within",
                 column: "ProviderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Providers_OwnerUserId",
                 table: "Providers",
+                schema: "within",
                 column: "OwnerUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Providers_Slug",
                 table: "Providers",
+                schema: "within",
                 column: "Slug",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reactions_PostId_CommentId_UserId_Kind",
                 table: "Reactions",
+                schema: "within",
                 columns: new[] { "PostId", "CommentId", "UserId", "Kind" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_TokenHash",
                 table: "RefreshTokens",
+                schema: "within",
                 column: "TokenHash",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reviews_EventId_UserId",
                 table: "Reviews",
+                schema: "within",
                 columns: new[] { "EventId", "UserId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_SavedEvents_EventId_UserId",
                 table: "SavedEvents",
+                schema: "within",
                 columns: new[] { "EventId", "UserId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_Email",
                 table: "Users",
+                schema: "within",
                 column: "Email",
                 unique: true);
         }
@@ -430,55 +466,72 @@ namespace WithinAPI.Data.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Comments");
+                name: "Comments",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "Communities");
+                name: "Communities",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "CommunityMembers");
+                name: "CommunityMembers",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "DailyCheckIns");
+                name: "DailyCheckIns",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "DeviceTokens");
+                name: "DeviceTokens",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "EventRegistrations");
+                name: "EventRegistrations",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "Events");
+                name: "Events",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "MonthlyProfiles");
+                name: "MonthlyProfiles",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "NotificationPreferences");
+                name: "NotificationPreferences",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "NotificationSchedules");
+                name: "NotificationSchedules",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "Posts");
+                name: "Posts",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "Providers");
+                name: "Providers",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "Reactions");
+                name: "Reactions",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "RefreshTokens");
+                name: "RefreshTokens",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "Reviews");
+                name: "Reviews",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "SavedEvents");
+                name: "SavedEvents",
+                schema: "within");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "Users",
+                schema: "within");
         }
     }
 }
