@@ -6,3 +6,4 @@ obj/
 *.suo
 appsettings.Local.json
 .keys/
+/infra/bootstrap.ps1
