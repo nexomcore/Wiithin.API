@@ -28,21 +28,22 @@ builder.Services.AddCors(options =>
     options.AddPolicy("WithinClients", policy =>
         policy.AllowAnyHeader()
             .AllowAnyMethod()
-            .WithOrigins(
-                "http://localhost:19006",
-                "http://localhost:8081",
-                "http://localhost:8082",
-                "http://localhost:4200",
-                "http://localhost:4300",
-                "http://127.0.0.1:19006",
-                "http://127.0.0.1:8081",
-                "http://127.0.0.1:8082",
-                "http://127.0.0.1:4200",
-                "http://127.0.0.1:4300",
-                "http://192.168.1.105:19006",
-                "http://192.168.1.105:8081",
-                "http://192.168.1.105:8082",
-                "http://192.168.1.105:4200"));
+            .SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrEmpty(origin) || !Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                {
+                    return false;
+                }
+
+                if (uri.Host is "localhost" or "127.0.0.1" or "192.168.1.105")
+                {
+                    return true;
+                }
+
+                return uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.Equals("discover-within.com", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.EndsWith(".discover-within.com", StringComparison.OrdinalIgnoreCase);
+            }));
 });
 
 builder.Services.AddDbContext<WithinDbContext>(options =>
