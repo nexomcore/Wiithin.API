@@ -8,6 +8,7 @@ public static class EndpointRegistrationExtensions
         app.MapAuthEndpoints();
         app.MapAdminEndpoints();
         app.MapMarketFitEndpoints();
+        app.MapProviderApplicationEndpoints();
         app.MapHomeEndpoints();
         app.MapProviderEndpoints();
         app.MapEventEndpoints();

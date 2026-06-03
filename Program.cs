@@ -94,7 +94,6 @@ var app = builder.Build();
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<WithinDbContext>();
     await db.Database.MigrateAsync();
-    await WithinSeedData.EnsureAsync(db);
 }
 
 app.UseSwagger();

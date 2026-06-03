@@ -339,47 +339,6 @@ namespace WithinAPI.Data.Migrations
                     table.PrimaryKey("PK_Users", x => x.Id);
                 });
 
-            migrationBuilder.InsertData(
-                table: "Communities",
-                schema: "within",
-                columns: new[] { "Id", "CreatedUtc", "Description", "Lens", "Location", "Name", "ProviderId" },
-                values: new object[,]
-                {
-                    { new Guid("88888888-8888-8888-8888-888888888888"), new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Run club, HYROX, pilates, and outdoor training updates.", 0, "Perth", "TheTrack Community", new Guid("44444444-4444-4444-4444-444444444444") },
-                    { new Guid("99999999-9999-9999-9999-999999999999"), new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Meditation, reflection, and spiritual growth discussions.", 2, "Perth", "Prana Circle", new Guid("55555555-5555-5555-5555-555555555555") }
-                });
-
-            migrationBuilder.InsertData(
-                table: "Events",
-                schema: "within",
-                columns: new[] { "Id", "Capacity", "CreatedUtc", "Currency", "Description", "EndUtc", "ExternalBookingUrl", "ImageUrl", "IsOnline", "Lens", "LocationName", "PriceAmount", "ProviderId", "SignupType", "StartUtc", "Status", "Tags", "Title" },
-                values: new object[,]
-                {
-                    { new Guid("66666666-6666-6666-6666-666666666666"), 32, new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "AUD", "Beginner-friendly social run followed by coffee.", new DateTimeOffset(new DateTime(2026, 5, 31, 1, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, null, false, 0, "Langley Park", 0m, new Guid("44444444-4444-4444-4444-444444444444"), 0, new DateTimeOffset(new DateTime(2026, 5, 30, 23, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), 1, new[] { "free", "weekend", "beginner-friendly" }, "Saturday Run Club" },
-                    { new Guid("77777777-7777-7777-7777-777777777777"), 18, new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "AUD", "A calm circle for breath awareness, grounding, and reflection.", new DateTimeOffset(new DateTime(2026, 5, 31, 2, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, null, false, 2, "North Perth Wellness Studio", 0m, new Guid("55555555-5555-5555-5555-555555555555"), 0, new DateTimeOffset(new DateTime(2026, 5, 31, 1, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), 1, new[] { "free", "weekend", "meditation" }, "Guided Meditation Circle" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "Providers",
-                schema: "within",
-                columns: new[] { "Id", "Bio", "CreatedUtc", "InstagramUrl", "IsVerified", "Lens", "Location", "Name", "OwnerUserId", "Slug", "WebsiteUrl" },
-                values: new object[,]
-                {
-                    { new Guid("44444444-4444-4444-4444-444444444444"), "Run club, HYROX conditioning, pilates, and outdoor fitness in Perth.", new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, 0, "Langley Park, Perth", "TheTrack Langley Park", new Guid("22222222-2222-2222-2222-222222222222"), "thetrack-langley-park", "https://example.com/thetrack" },
-                    { new Guid("55555555-5555-5555-5555-555555555555"), "Meditation, spiritual healing, breathwork, retreats, and reflection circles.", new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), null, true, 2, "North Perth", "Prana Wellness", new Guid("33333333-3333-3333-3333-333333333333"), "prana-wellness", "https://example.com/prana" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "Users",
-                schema: "within",
-                columns: new[] { "Id", "CreatedUtc", "DisplayName", "Email", "PasswordHash", "PreferredLens", "Role" },
-                values: new object[,]
-                {
-                    { new Guid("11111111-1111-1111-1111-111111111111"), new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Demo User", "demo@within.local", "pbkdf2:AQIDBAUGBwgJCgsMDQ4PEA==:+8XHFlhvxuo21D9qorz3lLT5BMobw/7nT57cxsiviS8=", 1, 0 },
-                    { new Guid("22222222-2222-2222-2222-222222222222"), new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "TheTrack Provider", "provider@thetrack.local", "pbkdf2:AQIDBAUGBwgJCgsMDQ4PEA==:+8XHFlhvxuo21D9qorz3lLT5BMobw/7nT57cxsiviS8=", 1, 1 },
-                    { new Guid("33333333-3333-3333-3333-333333333333"), new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Prana Provider", "provider@prana.local", "pbkdf2:AQIDBAUGBwgJCgsMDQ4PEA==:+8XHFlhvxuo21D9qorz3lLT5BMobw/7nT57cxsiviS8=", 1, 1 }
-                });
-
             migrationBuilder.CreateIndex(
                 name: "IX_CommunityMembers_CommunityId_UserId",
                 table: "CommunityMembers",

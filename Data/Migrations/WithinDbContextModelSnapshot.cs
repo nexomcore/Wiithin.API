@@ -24,6 +24,8 @@ namespace WithinAPI.Data.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "event_join_state", new[] { "interested", "going", "attended" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "event_status", new[] { "draft", "published", "cancelled" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "notification_kind", new[] { "daily_motivation", "event_reminder24h", "event_reminder2h", "event_updated", "community_summary", "provider_new_event" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "provider_application_status", new[] { "submitted", "in_review", "more_info_requested", "approved", "rejected" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "provider_category", new[] { "business_studio", "individual_practitioner", "collective_community_group", "retreat_program_organiser", "venue_space_partner", "corporate_workplace_wellness" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "signup_type", new[] { "internal", "external" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "within_lens", new[] { "move", "feel", "seek" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "within_role", new[] { "user", "provider", "admin" });
@@ -89,28 +91,6 @@ namespace WithinAPI.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Communities", "within");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("88888888-8888-8888-8888-888888888888"),
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Run club, HYROX, pilates, and outdoor training updates.",
-                            Lens = 0,
-                            Location = "Perth",
-                            Name = "TheTrack Community",
-                            ProviderId = new Guid("44444444-4444-4444-4444-444444444444")
-                        },
-                        new
-                        {
-                            Id = new Guid("99999999-9999-9999-9999-999999999999"),
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Meditation, reflection, and spiritual growth discussions.",
-                            Lens = 2,
-                            Location = "Perth",
-                            Name = "Prana Circle",
-                            ProviderId = new Guid("55555555-5555-5555-5555-555555555555")
-                        });
                 });
 
             modelBuilder.Entity("WithinAPI.Domain.CommunityMember", b =>
@@ -278,46 +258,6 @@ namespace WithinAPI.Data.Migrations
                     b.HasIndex("Lens", "StartUtc");
 
                     b.ToTable("Events", "within");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("66666666-6666-6666-6666-666666666666"),
-                            Capacity = 32,
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Currency = "AUD",
-                            Description = "Beginner-friendly social run followed by coffee.",
-                            EndUtc = new DateTimeOffset(new DateTime(2026, 5, 31, 1, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsOnline = false,
-                            Lens = 0,
-                            LocationName = "Langley Park",
-                            PriceAmount = 0m,
-                            ProviderId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            SignupType = 0,
-                            StartUtc = new DateTimeOffset(new DateTime(2026, 5, 30, 23, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Status = 1,
-                            Tags = new[] { "free", "weekend", "beginner-friendly" },
-                            Title = "Saturday Run Club"
-                        },
-                        new
-                        {
-                            Id = new Guid("77777777-7777-7777-7777-777777777777"),
-                            Capacity = 18,
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Currency = "AUD",
-                            Description = "A calm circle for breath awareness, grounding, and reflection.",
-                            EndUtc = new DateTimeOffset(new DateTime(2026, 5, 31, 2, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsOnline = false,
-                            Lens = 2,
-                            LocationName = "North Perth Wellness Studio",
-                            PriceAmount = 0m,
-                            ProviderId = new Guid("55555555-5555-5555-5555-555555555555"),
-                            SignupType = 0,
-                            StartUtc = new DateTimeOffset(new DateTime(2026, 5, 31, 1, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Status = 1,
-                            Tags = new[] { "free", "weekend", "meditation" },
-                            Title = "Guided Meditation Circle"
-                        });
                 });
 
             modelBuilder.Entity("WithinAPI.Domain.EventRegistration", b =>
@@ -567,34 +507,174 @@ namespace WithinAPI.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Providers", "within");
+                });
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444444"),
-                            Bio = "Run club, HYROX conditioning, pilates, and outdoor fitness in Perth.",
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsVerified = true,
-                            Lens = 0,
-                            Location = "Langley Park, Perth",
-                            Name = "TheTrack Langley Park",
-                            OwnerUserId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            Slug = "thetrack-langley-park",
-                            WebsiteUrl = "https://example.com/thetrack"
-                        },
-                        new
-                        {
-                            Id = new Guid("55555555-5555-5555-5555-555555555555"),
-                            Bio = "Meditation, spiritual healing, breathwork, retreats, and reflection circles.",
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsVerified = true,
-                            Lens = 2,
-                            Location = "North Perth",
-                            Name = "Prana Wellness",
-                            OwnerUserId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            Slug = "prana-wellness",
-                            WebsiteUrl = "https://example.com/prana"
-                        });
+            modelBuilder.Entity("WithinAPI.Domain.ProviderApplication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Abn")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("AdminFacingNotes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AdminNotes")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ApprovedProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Bio")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BookingTools")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BusinessType")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Certifications")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("ContactName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.Property<string>("ContactPhone")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("CredentialLinks")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("DeclarationAccepted")
+                        .HasColumnType("boolean");
+
+                    b.PrimitiveCollection<string[]>("DeliveryModes")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("ExpectedFirstEvent")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirstAidCpr")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("HasEventsReady")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("InstagramUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InsuranceStatus")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("JoinReason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.Property<string>("OtherSocialUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreferredContactMethod")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("PrimaryLens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProfessionalMemberships")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProviderCategory")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.Property<string>("ReviewDecisionReason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ReviewedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<string[]>("ServiceAreas")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.PrimitiveCollection<string[]>("ServicesOffered")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SubmittedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TypicalAudience")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VenueNames")
+                        .HasColumnType("text");
+
+                    b.Property<string>("WebsiteUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("WorkingWithChildrenCheck")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("YearsPracticing")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContactEmail");
+
+                    b.HasIndex("Status", "SubmittedUtc");
+
+                    b.ToTable("ProviderApplications", "within");
                 });
 
             modelBuilder.Entity("WithinAPI.Domain.Reaction", b =>
@@ -745,38 +825,6 @@ namespace WithinAPI.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Users", "within");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DisplayName = "Demo User",
-                            Email = "demo@within.local",
-                            PasswordHash = "pbkdf2:AQIDBAUGBwgJCgsMDQ4PEA==:+8XHFlhvxuo21D9qorz3lLT5BMobw/7nT57cxsiviS8=",
-                            PreferredLens = 1,
-                            Role = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DisplayName = "TheTrack Provider",
-                            Email = "provider@thetrack.local",
-                            PasswordHash = "pbkdf2:AQIDBAUGBwgJCgsMDQ4PEA==:+8XHFlhvxuo21D9qorz3lLT5BMobw/7nT57cxsiviS8=",
-                            PreferredLens = 1,
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            CreatedUtc = new DateTimeOffset(new DateTime(2026, 5, 27, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DisplayName = "Prana Provider",
-                            Email = "provider@prana.local",
-                            PasswordHash = "pbkdf2:AQIDBAUGBwgJCgsMDQ4PEA==:+8XHFlhvxuo21D9qorz3lLT5BMobw/7nT57cxsiviS8=",
-                            PreferredLens = 1,
-                            Role = 1
-                        });
                 });
 #pragma warning restore 612, 618
         }

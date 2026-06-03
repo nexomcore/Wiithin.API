@@ -40,6 +40,48 @@ public static class ApiMapping
         provider.InstagramUrl,
         provider.IsVerified);
 
+    public static ProviderApplicationDto ToDto(this ProviderApplication application) => new(
+        application.Id,
+        application.Status,
+        application.ProviderCategory,
+        application.PrimaryLens,
+        application.ServiceAreas,
+        application.ContactName,
+        application.ContactEmail,
+        application.ContactPhone,
+        application.PreferredContactMethod,
+        application.ProviderName,
+        application.BusinessType,
+        application.Abn,
+        application.WebsiteUrl,
+        application.InstagramUrl,
+        application.OtherSocialUrl,
+        application.Location,
+        application.DeliveryModes,
+        application.VenueNames,
+        application.ServicesOffered,
+        application.YearsPracticing,
+        application.TypicalAudience,
+        application.Bio,
+        application.JoinReason,
+        application.Certifications,
+        application.InsuranceStatus,
+        application.WorkingWithChildrenCheck,
+        application.FirstAidCpr,
+        application.ProfessionalMemberships,
+        application.CredentialLinks,
+        application.HasEventsReady,
+        application.ExpectedFirstEvent,
+        application.BookingTools,
+        application.AdminFacingNotes,
+        application.DeclarationAccepted,
+        application.AdminNotes,
+        application.ReviewDecisionReason,
+        application.SubmittedUtc,
+        application.UpdatedUtc,
+        application.ReviewedUtc,
+        application.ApprovedProviderId);
+
     public static Event ToEntity(this UpsertEventDto request, Guid providerId)
     {
         var evt = new Event

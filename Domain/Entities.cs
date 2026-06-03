@@ -44,6 +44,25 @@ public enum NotificationKind
     ProviderNewEvent
 }
 
+public enum ProviderApplicationStatus
+{
+    Submitted,
+    InReview,
+    MoreInfoRequested,
+    Approved,
+    Rejected
+}
+
+public enum ProviderCategory
+{
+    BusinessStudio,
+    IndividualPractitioner,
+    CollectiveCommunityGroup,
+    RetreatProgramOrganiser,
+    VenueSpacePartner,
+    CorporateWorkplaceWellness
+}
+
 public sealed class User
 {
     public Guid Id { get; set; }
@@ -88,6 +107,50 @@ public sealed class Provider
     public string? InstagramUrl { get; set; }
     public bool IsVerified { get; set; }
     public DateTimeOffset CreatedUtc { get; set; }
+}
+
+public sealed class ProviderApplication
+{
+    public Guid Id { get; set; }
+    public ProviderApplicationStatus Status { get; set; } = ProviderApplicationStatus.Submitted;
+    public ProviderCategory ProviderCategory { get; set; }
+    public WithinLens PrimaryLens { get; set; }
+    public string[] ServiceAreas { get; set; } = [];
+    public string ContactName { get; set; } = "";
+    public string ContactEmail { get; set; } = "";
+    public string ContactPhone { get; set; } = "";
+    public string PreferredContactMethod { get; set; } = "";
+    public string ProviderName { get; set; } = "";
+    public string BusinessType { get; set; } = "";
+    public string? Abn { get; set; }
+    public string? WebsiteUrl { get; set; }
+    public string? InstagramUrl { get; set; }
+    public string? OtherSocialUrl { get; set; }
+    public string Location { get; set; } = "";
+    public string[] DeliveryModes { get; set; } = [];
+    public string? VenueNames { get; set; }
+    public string[] ServicesOffered { get; set; } = [];
+    public string YearsPracticing { get; set; } = "";
+    public string TypicalAudience { get; set; } = "";
+    public string Bio { get; set; } = "";
+    public string JoinReason { get; set; } = "";
+    public string Certifications { get; set; } = "";
+    public string InsuranceStatus { get; set; } = "";
+    public string WorkingWithChildrenCheck { get; set; } = "";
+    public string FirstAidCpr { get; set; } = "";
+    public string? ProfessionalMemberships { get; set; }
+    public string? CredentialLinks { get; set; }
+    public string HasEventsReady { get; set; } = "";
+    public string ExpectedFirstEvent { get; set; } = "";
+    public string BookingTools { get; set; } = "";
+    public string? AdminFacingNotes { get; set; }
+    public bool DeclarationAccepted { get; set; }
+    public string AdminNotes { get; set; } = "";
+    public string ReviewDecisionReason { get; set; } = "";
+    public DateTimeOffset SubmittedUtc { get; set; }
+    public DateTimeOffset UpdatedUtc { get; set; }
+    public DateTimeOffset? ReviewedUtc { get; set; }
+    public Guid? ApprovedProviderId { get; set; }
 }
 
 public sealed class Event

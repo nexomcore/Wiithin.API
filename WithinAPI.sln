@@ -5,6 +5,8 @@ VisualStudioVersion = 18.3.11527.330 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WithinAPI", "WithinAPI.csproj", "{011E482D-7957-05DF-FD2F-D2AA97EF1B19}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Within.Seed", "Within.Seed\Within.Seed.csproj", "{7DCAAF15-4483-4C13-B807-7B2C37BC0520}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{011E482D-7957-05DF-FD2F-D2AA97EF1B19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{011E482D-7957-05DF-FD2F-D2AA97EF1B19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{011E482D-7957-05DF-FD2F-D2AA97EF1B19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7DCAAF15-4483-4C13-B807-7B2C37BC0520}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7DCAAF15-4483-4C13-B807-7B2C37BC0520}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7DCAAF15-4483-4C13-B807-7B2C37BC0520}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7DCAAF15-4483-4C13-B807-7B2C37BC0520}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
