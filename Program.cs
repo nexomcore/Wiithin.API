@@ -46,9 +46,13 @@ builder.Services.AddCors(options =>
             }));
 });
 
+var withinPostgresConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? builder.Configuration.GetConnectionString("WithinPostgres")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is required.");
+
 builder.Services.AddDbContext<WithinDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("WithinPostgres"),
+        withinPostgresConnectionString,
         postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", WithinDbContext.Schema)));
 
 builder.Services.AddSingleton<WellbeingScoringService>();

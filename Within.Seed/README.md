@@ -22,7 +22,7 @@ Without `--apply`, the tool prints usage and exits without touching the database
 
 ## Configuration
 
-The tool reads the same `ConnectionStrings:WithinPostgres` setting as the API:
+The tool reads the same `ConnectionStrings:DefaultConnection` setting as the API, with `WithinPostgres` kept as a legacy fallback:
 
 - `appsettings.json`
 - `appsettings.{DOTNET_ENVIRONMENT}.json` or `appsettings.{ASPNETCORE_ENVIRONMENT}.json`

@@ -25,8 +25,9 @@ var configuration = new ConfigurationBuilder()
     .AddCommandLine(args)
     .Build();
 
-var connectionString = configuration.GetConnectionString("WithinPostgres")
-    ?? throw new InvalidOperationException("Connection string 'WithinPostgres' is required.");
+var connectionString = configuration.GetConnectionString("DefaultConnection")
+    ?? configuration.GetConnectionString("WithinPostgres")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is required.");
 
 var dbOptions = new DbContextOptionsBuilder<WithinDbContext>()
     .UseNpgsql(
