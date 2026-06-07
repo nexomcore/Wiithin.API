@@ -11,7 +11,7 @@ permissions:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  AZURE_WEBAPP_NAME: app-within-api-np-001
+  AZURE_WEBAPP_NAME: webapp-within-np-001
   PROJECT_PATH: WithinAPI.csproj
   PUBLISH_DIR: ${{ github.workspace }}/publish
 
@@ -46,7 +46,7 @@ jobs:
           retention-days: 7
 
   deploy:
-    name: Deploy to ${{ vars.AZURE_ENVIRONMENT || 'app-within-api-np-001' }}
+    name: Deploy to ${{ vars.AZURE_ENVIRONMENT || 'webapp-within-np-001' }}
     needs: build
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

@@ -5,16 +5,17 @@ param location string = resourceGroup().location
 param appServicePlanName string = 'asp-within-np-001'
 
 @description('App Service (Web API) name. Must be globally unique.')
-param webAppName string = 'app-within-api-np-001'
+param webAppName string = 'webapp-within-np-001'
 
 @description('App Service Plan SKU. B1 = Basic single-instance.')
 @allowed([
+  'F1'
   'B1'
   'B2'
   'S1'
   'P1v3'
 ])
-param skuName string = 'B1'
+param skuName string = 'F1'
 
 @description('JWT issuer baked into the API config.')
 param jwtIssuer string = 'WithinAPI'
@@ -45,7 +46,7 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
       linuxFxVersion: 'DOTNETCORE|10.0'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      alwaysOn: true
+      alwaysOn: skuName != 'F1'
       http20Enabled: true
       appSettings: [
         {
