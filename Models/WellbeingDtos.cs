@@ -4,13 +4,15 @@ public sealed record DailyCheckInDto
 {
     public string? Id { get; init; }
     public string CheckInDate { get; init; } = "";
-    public int MoodScore { get; init; }
-    public int EnergyScore { get; init; }
-    public int StressScore { get; init; }
-    public int ConnectionScore { get; init; }
-    public int MeaningScore { get; init; }
+    public string Mood { get; init; } = "";
+    public string Energy { get; init; } = "";
+    public string? SleepQuality { get; init; }
+    public decimal? SleepHours { get; init; }
+    public string Intention { get; init; } = "";
     public string[] Tags { get; init; } = [];
     public string? Note { get; init; }
+    public string? SuggestedActionKey { get; init; }
+    public string? SuggestedAction { get; init; }
     public int? DailyBalanceScore { get; init; }
 }
 
@@ -53,14 +55,14 @@ public sealed record RecommendationDto(
 
 public sealed record ReflectionDto(string Id, string Date, string Type, string Note);
 
-public sealed record WeeklyAveragesDto(decimal Mood, decimal Energy, decimal Stress, decimal Connection, decimal Meaning);
+public sealed record WeeklyAveragesDto(decimal Mood, decimal Energy, decimal Sleep);
 
 public sealed record WellbeingDashboardDto
 {
     public bool TodayCheckInCompleted { get; init; }
     public DailyCheckInDto? Today { get; init; }
     public int? DailyBalanceScore { get; init; }
-    public WeeklyAveragesDto WeeklyAverages { get; init; } = new(0, 0, 0, 0, 0);
+    public WeeklyAveragesDto WeeklyAverages { get; init; } = new(0, 0, 0);
     public string? StrongestArea { get; init; }
     public string? SupportArea { get; init; }
     public TrendItemDto[] TrendItems { get; init; } = [];

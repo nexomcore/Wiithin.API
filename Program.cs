@@ -103,6 +103,7 @@ var app = builder.Build();
         await db.Database.MigrateAsync();
         await CommunityTopicSeedData.EnsureSeededAsync(db);
         await CircleSeedData.EnsureSeededAsync(db);
+        await HabitTemplateSeedData.EnsureSeededAsync(db);
 }
 
 app.UseSwagger();

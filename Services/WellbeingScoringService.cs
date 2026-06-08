@@ -1,13 +1,59 @@
+using WithinAPI.Domain;
 using WithinAPI.Models;
 
 namespace WithinAPI.Services;
 
 public sealed class WellbeingScoringService
 {
-    public int CalculateDailyBalance(DailyCheckInDto input)
+    /// <summary>
+    /// Maps the qualitative mood label to a 1-5 wellbeing valence so daily balance and trends remain
+    /// comparable over time. Positive/settled moods score high; distressed moods score low.
+    /// </summary>
+    public static decimal MoodValence(CheckInMood mood) => mood switch
     {
-        var adjustedStress = 6 - input.StressScore;
-        var average = (input.MoodScore + input.EnergyScore + adjustedStress + input.ConnectionScore + input.MeaningScore) / 5m;
+        CheckInMood.Great => 5m,
+        CheckInMood.Good => 4m,
+        CheckInMood.Grateful => 4m,
+        CheckInMood.Peaceful => 4m,
+        CheckInMood.Okay => 3m,
+        CheckInMood.Tired => 2m,
+        CheckInMood.Low => 2m,
+        CheckInMood.Stressed => 2m,
+        CheckInMood.Anxious => 2m,
+        CheckInMood.Angry => 1m,
+        _ => 3m
+    };
+
+    public static decimal EnergyValence(CheckInEnergy energy) => energy switch
+    {
+        CheckInEnergy.High => 5m,
+        CheckInEnergy.Balanced => 4m,
+        CheckInEnergy.Low => 2m,
+        CheckInEnergy.Exhausted => 1m,
+        _ => 3m
+    };
+
+    public static decimal? SleepValence(CheckInSleepQuality? sleep) => sleep switch
+    {
+        CheckInSleepQuality.Great => 5m,
+        CheckInSleepQuality.Okay => 3m,
+        CheckInSleepQuality.Poor => 2m,
+        CheckInSleepQuality.VeryPoor => 1m,
+        CheckInSleepQuality.NotSure => null,
+        null => null,
+        _ => null
+    };
+
+    public int CalculateDailyBalance(CheckInMood mood, CheckInEnergy energy, CheckInSleepQuality? sleep)
+    {
+        var values = new List<decimal> { MoodValence(mood), EnergyValence(energy) };
+        var sleepValence = SleepValence(sleep);
+        if (sleepValence is not null)
+        {
+            values.Add(sleepValence.Value);
+        }
+
+        var average = values.Average();
         return (int)Math.Round((average / 5m) * 100m, MidpointRounding.AwayFromZero);
     }
 
@@ -64,18 +110,16 @@ public sealed class WellbeingScoringService
 
     public (string StrongestArea, string SupportArea) GetStrongestAndSupport(WeeklyAveragesDto weeklyAverages)
     {
-        var adjusted = new Dictionary<string, decimal>
+        var areas = new Dictionary<string, decimal>
         {
             ["Mood"] = weeklyAverages.Mood,
             ["Energy"] = weeklyAverages.Energy,
-            ["Stress"] = 6 - weeklyAverages.Stress,
-            ["Connection"] = weeklyAverages.Connection,
-            ["Meaning"] = weeklyAverages.Meaning
+            ["Sleep"] = weeklyAverages.Sleep
         };
 
         return (
-            adjusted.MaxBy(pair => pair.Value).Key,
-            adjusted.MinBy(pair => pair.Value).Key);
+            areas.MaxBy(pair => pair.Value).Key,
+            areas.MinBy(pair => pair.Value).Key);
     }
 
     private static int Percent(int raw, int max)

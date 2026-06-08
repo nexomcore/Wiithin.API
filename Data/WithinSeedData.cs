@@ -403,13 +403,15 @@ public static class WithinSeedData
             Id = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
             UserId = demoUserId,
             CheckInDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            MoodScore = 4,
-            EnergyScore = 4,
-            StressScore = 2,
-            ConnectionScore = 3,
-            MeaningScore = 4,
+            Mood = CheckInMood.Good,
+            Energy = CheckInEnergy.Balanced,
+            SleepQuality = CheckInSleepQuality.Okay,
+            Intention = DailyIntention.StayCalm,
             Tags = ["energised", "grounded"],
-            DailyBalanceScore = 75
+            SuggestedActionKey = "small_action",
+            DailyBalanceScore = 75,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
         });
 
         await db.SaveChangesAsync();
@@ -643,13 +645,16 @@ public static class WithinSeedData
             existing.CheckInDate = seed.CheckInDate;
         }
 
-        existing.MoodScore = seed.MoodScore;
-        existing.EnergyScore = seed.EnergyScore;
-        existing.StressScore = seed.StressScore;
-        existing.ConnectionScore = seed.ConnectionScore;
-        existing.MeaningScore = seed.MeaningScore;
+        existing.Mood = seed.Mood;
+        existing.Energy = seed.Energy;
+        existing.SleepQuality = seed.SleepQuality;
+        existing.SleepHours = seed.SleepHours;
+        existing.Intention = seed.Intention;
         existing.Tags = seed.Tags;
+        existing.SuggestedActionKey = seed.SuggestedActionKey;
         existing.DailyBalanceScore = seed.DailyBalanceScore;
         existing.Note = seed.Note;
+        existing.CreatedAtUtc = seed.CreatedAtUtc;
+        existing.UpdatedAtUtc = seed.UpdatedAtUtc;
     }
 }

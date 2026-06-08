@@ -1051,19 +1051,67 @@ public sealed class NotificationSchedule
     public DateTimeOffset? SentUtc { get; set; }
 }
 
+public enum CheckInMood
+{
+    Great,
+    Good,
+    Okay,
+    Low,
+    Stressed,
+    Anxious,
+    Tired,
+    Angry,
+    Grateful,
+    Peaceful
+}
+
+public enum CheckInEnergy
+{
+    High,
+    Balanced,
+    Low,
+    Exhausted
+}
+
+public enum CheckInSleepQuality
+{
+    Great,
+    Okay,
+    Poor,
+    VeryPoor,
+    NotSure
+}
+
+public enum DailyIntention
+{
+    StayCalm,
+    MoveMyBody,
+    EatBetter,
+    BeProductive,
+    RestAndRecover,
+    ConnectWithSomeone,
+    PracticeGratitude,
+    SpendTimeOutdoors,
+    BeMindful,
+    ReduceStress
+}
+
 public sealed class DailyCheckIn
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
     public DateOnly CheckInDate { get; set; }
-    public int MoodScore { get; set; }
-    public int EnergyScore { get; set; }
-    public int StressScore { get; set; }
-    public int ConnectionScore { get; set; }
-    public int MeaningScore { get; set; }
+    public CheckInMood Mood { get; set; }
+    public CheckInEnergy Energy { get; set; }
+    public CheckInSleepQuality? SleepQuality { get; set; }
+    public decimal? SleepHours { get; set; }
+    public DailyIntention Intention { get; set; }
     public string[] Tags { get; set; } = [];
     public string? Note { get; set; }
+    public string? SuggestedActionKey { get; set; }
     public int DailyBalanceScore { get; set; }
+    public DateTimeOffset CreatedAtUtc { get; set; }
+    public DateTimeOffset UpdatedAtUtc { get; set; }
 }
 
 public sealed class MonthlyProfile
@@ -1077,6 +1125,48 @@ public sealed class MonthlyProfile
     public int SeekScorePercent { get; set; }
     public int HolisticProfileScore { get; set; }
     public string? ReflectionNote { get; set; }
+}
+
+public enum HabitCategory
+{
+    Mind,
+    Body,
+    Lifestyle,
+    Social,
+    Nature
+}
+
+public sealed class HabitTemplate
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public HabitCategory Category { get; set; }
+    public string? Description { get; set; }
+    public string? IconKey { get; set; }
+    public int SortOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public sealed class UserHabit
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid? HabitTemplateId { get; set; }
+    public string Name { get; set; } = "";
+    public HabitCategory? Category { get; set; }
+    public bool IsCustom { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedAtUtc { get; set; }
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+}
+
+public sealed class HabitCompletion
+{
+    public Guid Id { get; set; }
+    public Guid UserHabitId { get; set; }
+    public Guid UserId { get; set; }
+    public DateOnly CompletionDate { get; set; }
+    public DateTimeOffset CompletedAtUtc { get; set; }
 }
 
 public sealed class MarketFitSubmission

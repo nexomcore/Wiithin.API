@@ -2,6 +2,7 @@ using System.Security.Claims;
 using WithinAPI.Data;
 using WithinAPI.Domain;
 using WithinAPI.Models;
+using WithinAPI.Services;
 
 namespace WithinAPI.Application;
 
@@ -36,15 +37,34 @@ public static class ApiMapping
     {
         Id = checkIn.Id.ToString(),
         CheckInDate = checkIn.CheckInDate.ToString("yyyy-MM-dd"),
-        MoodScore = checkIn.MoodScore,
-        EnergyScore = checkIn.EnergyScore,
-        StressScore = checkIn.StressScore,
-        ConnectionScore = checkIn.ConnectionScore,
-        MeaningScore = checkIn.MeaningScore,
+        Mood = checkIn.Mood.ToString(),
+        Energy = checkIn.Energy.ToString(),
+        SleepQuality = checkIn.SleepQuality?.ToString(),
+        SleepHours = checkIn.SleepHours,
+        Intention = checkIn.Intention.ToString(),
         Tags = checkIn.Tags,
         Note = checkIn.Note,
+        SuggestedActionKey = checkIn.SuggestedActionKey,
+        SuggestedAction = SuggestedActionRules.TextForKey(checkIn.SuggestedActionKey),
         DailyBalanceScore = checkIn.DailyBalanceScore
     };
+
+    public static HabitTemplateDto ToDto(this HabitTemplate template) => new(
+        template.Id.ToString(),
+        template.Name,
+        template.Category.ToString(),
+        template.Description,
+        template.IconKey,
+        template.SortOrder);
+
+    public static UserHabitDto ToDto(this UserHabit habit, bool completedToday) => new(
+        habit.Id.ToString(),
+        habit.HabitTemplateId?.ToString(),
+        habit.Name,
+        habit.Category?.ToString(),
+        habit.IsCustom,
+        habit.IsActive,
+        completedToday);
 
     public static ProviderDto ToDto(this Provider provider, int serviceCount = 0, bool publicSafe = true) => new(
         provider.Id,

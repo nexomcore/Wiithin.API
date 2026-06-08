@@ -40,25 +40,12 @@ public static class HomeEndpoints
                 .ToArrayAsync();
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var todayCheckIn = await db.DailyCheckIns
-                .Where(item => item.UserId == userId && item.CheckInDate == today)
-                .Select(item => new DailyCheckInDto
-                {
-                    Id = item.Id.ToString(),
-                    CheckInDate = item.CheckInDate.ToString("yyyy-MM-dd"),
-                    MoodScore = item.MoodScore,
-                    EnergyScore = item.EnergyScore,
-                    StressScore = item.StressScore,
-                    ConnectionScore = item.ConnectionScore,
-                    MeaningScore = item.MeaningScore,
-                    Note = item.Note,
-                    DailyBalanceScore = item.DailyBalanceScore
-                })
-                .FirstOrDefaultAsync();
+            var todayCheckInEntity = await db.DailyCheckIns
+                .FirstOrDefaultAsync(item => item.UserId == userId && item.CheckInDate == today);
 
             return Results.Ok(new HomeDashboardDto(
                 user.ToDto(),
-                todayCheckIn,
+                todayCheckInEntity?.ToDto(),
                 recommended,
                 communities,
                 $"Choose one {user.PreferredLens} action that supports your wellbeing today.",

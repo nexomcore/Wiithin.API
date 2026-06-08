@@ -57,6 +57,9 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
     public DbSet<NotificationSchedule> NotificationSchedules => Set<NotificationSchedule>();
     public DbSet<DailyCheckIn> DailyCheckIns => Set<DailyCheckIn>();
     public DbSet<MonthlyProfile> MonthlyProfiles => Set<MonthlyProfile>();
+    public DbSet<HabitTemplate> HabitTemplates => Set<HabitTemplate>();
+    public DbSet<UserHabit> UserHabits => Set<UserHabit>();
+    public DbSet<HabitCompletion> HabitCompletions => Set<HabitCompletion>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<MarketFitSubmission> MarketFitSubmissions => Set<MarketFitSubmission>();
 
@@ -441,6 +444,35 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         {
             entity.HasIndex(item => new { item.UserId, item.CheckInDate }).IsUnique();
             entity.Property(item => item.Tags).HasColumnType("text[]");
+            entity.Property(item => item.Mood).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Energy).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.SleepQuality).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Intention).HasConversion<string>().HasMaxLength(48);
+            entity.Property(item => item.SleepHours).HasColumnType("numeric(4,1)");
+            entity.Property(item => item.Note).HasMaxLength(500);
+            entity.Property(item => item.SuggestedActionKey).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<HabitTemplate>(entity =>
+        {
+            entity.Property(item => item.Category).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Name).HasMaxLength(60);
+            entity.Property(item => item.Description).HasMaxLength(240);
+            entity.Property(item => item.IconKey).HasMaxLength(48);
+            entity.HasIndex(item => item.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<UserHabit>(entity =>
+        {
+            entity.Property(item => item.Category).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Name).HasMaxLength(60);
+            entity.HasIndex(item => new { item.UserId, item.IsActive });
+        });
+
+        modelBuilder.Entity<HabitCompletion>(entity =>
+        {
+            entity.HasIndex(item => new { item.UserHabitId, item.CompletionDate }).IsUnique();
+            entity.HasIndex(item => new { item.UserId, item.CompletionDate });
         });
 
         modelBuilder.Entity<Notification>(entity =>
