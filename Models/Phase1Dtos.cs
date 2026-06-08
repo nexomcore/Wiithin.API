@@ -133,7 +133,21 @@ public sealed record EventDto(
     string? ExternalBookingUrl,
     string? ImageUrl,
     EventStatus Status,
-    string[] Tags);
+    string[] Tags,
+    string[] BringItems,
+    string? BringNotes,
+    string[] Facilities,
+    string[] AccessibilityFeatures,
+    string? PhysicalIntensity,
+    string? SocialInteractionLevel,
+    string? ExperienceLevel,
+    string[] AtmosphereTags,
+    bool FoodProvided,
+    bool DrinksProvided,
+    string[] DietaryOptions,
+    string? FoodNotes,
+    string? AgeRestriction,
+    string? SafetyNotes);
 
 public sealed record ProviderEventEngagementDto(
     Guid EventId,
@@ -175,7 +189,21 @@ public sealed record UpsertEventDto(
     SignupType SignupType,
     string? ExternalBookingUrl,
     string? ImageUrl,
-    string[] Tags);
+    string[] Tags,
+    string[]? BringItems = null,
+    string? BringNotes = null,
+    string[]? Facilities = null,
+    string[]? AccessibilityFeatures = null,
+    string? PhysicalIntensity = null,
+    string? SocialInteractionLevel = null,
+    string? ExperienceLevel = null,
+    string[]? AtmosphereTags = null,
+    bool FoodProvided = false,
+    bool DrinksProvided = false,
+    string[]? DietaryOptions = null,
+    string? FoodNotes = null,
+    string? AgeRestriction = null,
+    string? SafetyNotes = null);
 
 public sealed record JoinEventDto(EventJoinState State);
 
@@ -312,6 +340,7 @@ public sealed record CircleDto(
     string Name,
     string Slug,
     string Description,
+    string? Rules,
     Guid CreatedByUserId,
     CircleType Type,
     CircleVisibility Visibility,
@@ -323,19 +352,24 @@ public sealed record CircleDto(
     bool IsMember,
     bool IsPendingMember,
     CircleMemberRole? ViewerRole,
-    bool CanManage);
+    bool CanManage,
+    bool AllowAnonymousPosts);
 
 public sealed record CircleCreateDto(
     string Name,
     string Description,
     WithinLens Lens,
-    CircleVisibility Visibility);
+    CircleVisibility Visibility,
+    string? Rules = null,
+    bool AllowAnonymousPosts = false);
 
 public sealed record CircleUpdateDto(
     string Name,
     string Description,
     WithinLens Lens,
-    CircleVisibility Visibility);
+    CircleVisibility Visibility,
+    string? Rules = null,
+    bool AllowAnonymousPosts = false);
 
 public sealed record CircleGuidelineDto(Guid Id, string Title, string Body, int SortOrder);
 
@@ -359,6 +393,7 @@ public sealed record CircleThreadDto(
     Guid CircleId,
     string CircleName,
     CommunityPostType ThreadType,
+    CirclePostType PostType,
     string Title,
     string Body,
     CommunityContentStatus Status,
@@ -367,6 +402,13 @@ public sealed record CircleThreadDto(
     int HelpfulCount,
     int CommentCount,
     bool IsHelpful,
+    bool IsPinned,
+    bool IsAnonymous,
+    string? ImageUrl,
+    CircleReactionSummaryDto[] Reactions,
+    CirclePollDto? Poll,
+    CircleWeeklyCheckInDto? WeeklyCheckIn,
+    int CircleGoingCount,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     // Circle-identity-safe display metadata. Tap the author via contextType=CirclePost,
@@ -384,6 +426,8 @@ public sealed record CircleThreadCommentDto(
     CommunityAuthorDto Author,
     int HelpfulCount,
     bool IsHelpful,
+    bool IsAnonymous,
+    CircleReactionSummaryDto[] Reactions,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     // Tap the author via contextType=CircleComment, contextId=CircleId, targetContextProfileId=Id.
@@ -395,15 +439,22 @@ public sealed record CircleCreateThreadDto(
     CommunityPostType ThreadType,
     string Title,
     string Body,
-    Guid? LinkedEventId);
+    Guid? LinkedEventId,
+    CirclePostType? PostType = null,
+    bool IsPinned = false,
+    bool IsAnonymous = false,
+    string? ImageUrl = null,
+    CirclePollCreateDto? Poll = null);
 
 public sealed record CircleUpdateThreadDto(
     CommunityPostType ThreadType,
     string Title,
     string Body,
-    Guid? LinkedEventId);
+    Guid? LinkedEventId,
+    bool IsPinned = false,
+    string? ImageUrl = null);
 
-public sealed record CircleCreateCommentDto(string Body);
+public sealed record CircleCreateCommentDto(string Body, bool IsAnonymous = false);
 
 public sealed record CircleShareEventDto(Guid EventId, string? OptionalNote);
 
@@ -420,6 +471,36 @@ public sealed record CircleJoinRequestDto(
 public sealed record CircleRoleUpdateDto(CircleMemberRole Role);
 
 public sealed record CircleAnnouncementCreateDto(string Body, bool IsPinned);
+
+public sealed record CircleReactionSummaryDto(CircleReactionType ReactionType, int Count, bool HasReacted);
+
+public sealed record CircleReactionDto(CircleReactionType ReactionType);
+
+public sealed record CirclePollCreateDto(string Question, string[] Options, DateTimeOffset? ClosesAt = null);
+
+public sealed record CirclePollOptionDto(Guid Id, string Text, int VoteCount, bool HasVoted);
+
+public sealed record CirclePollDto(Guid Id, string Question, DateTimeOffset? ClosesAt, bool HasVoted, CirclePollOptionDto[] Options);
+
+public sealed record CirclePollVoteDto(Guid OptionId);
+
+public sealed record CircleWeeklyCheckInDto(Guid ThreadId, bool HasResponded, WeeklyCheckInMood? MyMood, IReadOnlyDictionary<WeeklyCheckInMood, int> Counts);
+
+public sealed record CircleWeeklyCheckInResponseDto(WeeklyCheckInMood Mood);
+
+public sealed record CircleInviteCreateDto(Guid[] UserIds);
+
+public sealed record CircleInviteDto(
+    Guid Id,
+    Guid CircleId,
+    string CircleName,
+    CommunityAuthorDto InvitedBy,
+    CommunityAuthorDto InvitedUser,
+    CircleInviteStatus Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record CircleAttendanceDto(Guid EventId, Guid CircleId, int Count);
 
 public sealed record CircleReportRequestDto(
     Guid? ThreadId,
@@ -558,7 +639,8 @@ public sealed record CircleMemberDto(
     DateTimeOffset JoinedAt,
     // Safe handle to pass to /api/profile-preview as targetContextProfileId (the membership id).
     Guid ContextProfileId = default,
-    bool IsClickable = false);
+    bool IsClickable = false,
+    string[]? Badges = null);
 
 public sealed record ReviewDto(Guid Id, string AuthorName, int Rating, string Body, DateTimeOffset CreatedUtc);
 

@@ -33,6 +33,12 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
     public DbSet<CircleThreadComment> CircleThreadComments => Set<CircleThreadComment>();
     public DbSet<CircleEvent> CircleEvents => Set<CircleEvent>();
     public DbSet<CircleHelpfulReaction> CircleHelpfulReactions => Set<CircleHelpfulReaction>();
+    public DbSet<CircleReaction> CircleReactions => Set<CircleReaction>();
+    public DbSet<CirclePoll> CirclePolls => Set<CirclePoll>();
+    public DbSet<CirclePollOption> CirclePollOptions => Set<CirclePollOption>();
+    public DbSet<CirclePollVote> CirclePollVotes => Set<CirclePollVote>();
+    public DbSet<CircleWeeklyCheckInResponse> CircleWeeklyCheckInResponses => Set<CircleWeeklyCheckInResponse>();
+    public DbSet<CircleInvite> CircleInvites => Set<CircleInvite>();
     public DbSet<CircleReport> CircleReports => Set<CircleReport>();
     public DbSet<CircleGuideline> CircleGuidelines => Set<CircleGuideline>();
     public DbSet<CircleAnnouncement> CircleAnnouncements => Set<CircleAnnouncement>();
@@ -90,6 +96,10 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.HasPostgresEnum<CirclePrivacyType>();
         modelBuilder.HasPostgresEnum<MemberListVisibility>();
         modelBuilder.HasPostgresEnum<CirclePostVisibility>();
+        modelBuilder.HasPostgresEnum<CirclePostType>();
+        modelBuilder.HasPostgresEnum<CircleReactionType>();
+        modelBuilder.HasPostgresEnum<WeeklyCheckInMood>();
+        modelBuilder.HasPostgresEnum<CircleInviteStatus>();
         modelBuilder.HasPostgresEnum<UserReportStatus>();
         modelBuilder.HasPostgresEnum<UserReportReason>();
 
@@ -135,6 +145,18 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
             entity.HasIndex(item => new { item.Lens, item.StartUtc });
             entity.HasIndex(item => item.ProviderId);
             entity.Property(item => item.Tags).HasColumnType("text[]");
+            entity.Property(item => item.BringItems).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.Facilities).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.AccessibilityFeatures).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.AtmosphereTags).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.DietaryOptions).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.PhysicalIntensity).HasMaxLength(20);
+            entity.Property(item => item.SocialInteractionLevel).HasMaxLength(20);
+            entity.Property(item => item.ExperienceLevel).HasMaxLength(80);
+            entity.Property(item => item.AgeRestriction).HasMaxLength(40);
+            entity.Property(item => item.BringNotes).HasMaxLength(1000);
+            entity.Property(item => item.FoodNotes).HasMaxLength(1000);
+            entity.Property(item => item.SafetyNotes).HasMaxLength(1500);
         });
 
         modelBuilder.Entity<EventRegistration>(entity =>
@@ -208,6 +230,7 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
             entity.Property(item => item.Name).HasMaxLength(120);
             entity.Property(item => item.Slug).HasMaxLength(120);
             entity.Property(item => item.Description).HasMaxLength(600);
+            entity.Property(item => item.Rules).HasMaxLength(2000);
             entity.Property(item => item.AllowPseudonyms).HasDefaultValue(true);
             entity.Property(item => item.AllowHiddenProfiles).HasDefaultValue(true);
             entity.Property(item => item.AllowAnonymousPosts).HasDefaultValue(false);
@@ -240,16 +263,23 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.Entity<CircleThread>(entity =>
         {
             entity.HasIndex(item => new { item.CircleId, item.Status, item.CreatedAt });
+            entity.HasIndex(item => new { item.CircleId, item.IsPinned, item.PostType, item.CreatedAt });
+            entity.HasIndex(item => new { item.CircleId, item.PostType, item.WeeklyCheckInWeekStart });
             entity.HasIndex(item => item.LinkedEventId);
             entity.HasIndex(item => item.UserId);
+            entity.Property(item => item.PostType).HasDefaultValue(CirclePostType.Standard);
+            entity.Property(item => item.IsPinned).HasDefaultValue(false);
+            entity.Property(item => item.IsAnonymous).HasDefaultValue(false);
             entity.Property(item => item.Title).HasMaxLength(140);
             entity.Property(item => item.Body).HasMaxLength(4000);
+            entity.Property(item => item.ImageUrl).HasMaxLength(1000);
         });
 
         modelBuilder.Entity<CircleThreadComment>(entity =>
         {
             entity.HasIndex(item => new { item.ThreadId, item.CreatedAt });
             entity.HasIndex(item => item.UserId);
+            entity.Property(item => item.IsAnonymous).HasDefaultValue(false);
             entity.Property(item => item.Body).HasMaxLength(1200);
         });
 
@@ -268,6 +298,45 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
             entity.HasIndex(item => new { item.CommentId, item.UserId })
                 .IsUnique()
                 .HasFilter("\"CommentId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<CircleReaction>(entity =>
+        {
+            entity.HasIndex(item => new { item.ThreadId, item.UserId, item.ReactionType })
+                .IsUnique()
+                .HasFilter("\"ThreadId\" IS NOT NULL");
+            entity.HasIndex(item => new { item.CommentId, item.UserId, item.ReactionType })
+                .IsUnique()
+                .HasFilter("\"CommentId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<CirclePoll>(entity =>
+        {
+            entity.HasIndex(item => item.ThreadId).IsUnique();
+            entity.Property(item => item.Question).HasMaxLength(240);
+        });
+
+        modelBuilder.Entity<CirclePollOption>(entity =>
+        {
+            entity.HasIndex(item => new { item.PollId, item.SortOrder });
+            entity.Property(item => item.Text).HasMaxLength(120);
+        });
+
+        modelBuilder.Entity<CirclePollVote>(entity =>
+        {
+            entity.HasIndex(item => new { item.PollId, item.UserId }).IsUnique();
+            entity.HasIndex(item => item.OptionId);
+        });
+
+        modelBuilder.Entity<CircleWeeklyCheckInResponse>(entity =>
+        {
+            entity.HasIndex(item => new { item.ThreadId, item.UserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<CircleInvite>(entity =>
+        {
+            entity.HasIndex(item => new { item.CircleId, item.InvitedUserId, item.Status });
+            entity.HasIndex(item => new { item.InvitedUserId, item.Status });
         });
 
         modelBuilder.Entity<CircleReport>(entity =>

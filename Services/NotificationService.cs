@@ -192,6 +192,22 @@ public sealed class NotificationService(WithinDbContext db)
         }
     }
 
+    public async Task NotifyCircleInvite(Guid invitedUserId, Guid inviterUserId, Guid circleId, Guid inviteId)
+    {
+        var actorName = await UserName(inviterUserId);
+        var circleName = await db.Circles.Where(item => item.Id == circleId).Select(item => item.Name).FirstOrDefaultAsync() ?? "Circle";
+        await CreateAsync(new NotificationCreateRequest(
+            invitedUserId,
+            NotificationKind.CircleInvite,
+            "Circle invite",
+            $"{actorName} invited you to join {circleName}.",
+            NotificationTargetType.Circle,
+            circleId,
+            inviterUserId,
+            CircleId: circleId,
+            RelatedUserId: inviterUserId));
+    }
+
     public async Task ScheduleEventReminders(Guid userId, Event evt, EventJoinState state)
     {
         await db.NotificationSchedules
@@ -273,7 +289,7 @@ public sealed class NotificationService(WithinDbContext db)
             NotificationKind.FriendRequestReceived or NotificationKind.FriendRequestAccepted => prefs.FriendRequestsEnabled,
             NotificationKind.EventInvite => prefs.EventInvitesEnabled,
             NotificationKind.PublicFriendRsvp => prefs.FriendActivityEnabled,
-            NotificationKind.CircleThreadReply => prefs.CircleRepliesEnabled,
+            NotificationKind.CircleThreadReply or NotificationKind.CircleInvite => prefs.CircleRepliesEnabled,
             NotificationKind.CommentReply => prefs.CommentRepliesEnabled,
             NotificationKind.UserMention => prefs.MentionsEnabled,
             _ => true

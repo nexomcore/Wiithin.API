@@ -46,6 +46,8 @@ public static class EventEndpoints
 
         events.MapPost("", async (UpsertEventDto request, WithinDbContext db, ClaimsPrincipal principal) =>
         {
+            if (!request.TryValidate(out var validationMessage)) return Results.BadRequest(new { message = validationMessage });
+
             var provider = await db.Providers.FirstOrDefaultAsync(item => item.OwnerUserId == principal.UserId());
             if (provider is null) return Results.Forbid();
 
@@ -57,6 +59,8 @@ public static class EventEndpoints
 
         events.MapPut("/{id:guid}", async (Guid id, UpsertEventDto request, WithinDbContext db, ClaimsPrincipal principal) =>
         {
+            if (!request.TryValidate(out var validationMessage)) return Results.BadRequest(new { message = validationMessage });
+
             var evt = await db.Events.FindAsync(id);
             var provider = evt is null ? null : await db.Providers.FindAsync(evt.ProviderId);
             if (evt is null || provider is null) return Results.NotFound();

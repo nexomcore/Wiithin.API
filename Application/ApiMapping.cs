@@ -7,6 +7,23 @@ namespace WithinAPI.Application;
 
 public static class ApiMapping
 {
+    private static readonly HashSet<string> IntensityOptions = new(StringComparer.OrdinalIgnoreCase) { "low", "medium", "high" };
+    private static readonly HashSet<string> ExperienceLevelOptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "beginner_friendly",
+        "some_experience_recommended",
+        "experienced_participants_only"
+    };
+    private static readonly HashSet<string> AgeRestrictionOptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "all_ages",
+        "13_plus",
+        "16_plus",
+        "18_plus",
+        "seniors_focused",
+        "family_kids_friendly"
+    };
+
     public static Guid UserId(this ClaimsPrincipal principal) =>
         Guid.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("User id claim missing."));
 
@@ -110,8 +127,52 @@ public static class ApiMapping
         evt.SignupType = request.SignupType;
         evt.ExternalBookingUrl = request.ExternalBookingUrl;
         evt.ImageUrl = request.ImageUrl;
-        evt.Tags = request.Tags.Select(tag => tag.Trim().ToLowerInvariant()).Where(tag => tag.Length > 0).Distinct().ToArray();
+        evt.Tags = NormalizeList(request.Tags);
+        evt.BringItems = NormalizeList(request.BringItems);
+        evt.BringNotes = NormalizeNullable(request.BringNotes);
+        evt.Facilities = NormalizeList(request.Facilities);
+        evt.AccessibilityFeatures = NormalizeList(request.AccessibilityFeatures);
+        evt.PhysicalIntensity = NormalizeSingle(request.PhysicalIntensity);
+        evt.SocialInteractionLevel = NormalizeSingle(request.SocialInteractionLevel);
+        evt.ExperienceLevel = NormalizeSingle(request.ExperienceLevel);
+        evt.AtmosphereTags = NormalizeList(request.AtmosphereTags);
+        evt.FoodProvided = request.FoodProvided;
+        evt.DrinksProvided = request.DrinksProvided;
+        evt.DietaryOptions = NormalizeList(request.DietaryOptions);
+        evt.FoodNotes = NormalizeNullable(request.FoodNotes);
+        evt.AgeRestriction = NormalizeSingle(request.AgeRestriction);
+        evt.SafetyNotes = NormalizeNullable(request.SafetyNotes);
         return evt;
+    }
+
+    public static bool TryValidate(this UpsertEventDto request, out string message)
+    {
+        if (!IsAllowed(request.PhysicalIntensity, IntensityOptions))
+        {
+            message = "Physical intensity must be low, medium, or high.";
+            return false;
+        }
+
+        if (!IsAllowed(request.SocialInteractionLevel, IntensityOptions))
+        {
+            message = "Social interaction level must be low, medium, or high.";
+            return false;
+        }
+
+        if (!IsAllowed(request.ExperienceLevel, ExperienceLevelOptions))
+        {
+            message = "Experience level is not a supported option.";
+            return false;
+        }
+
+        if (!IsAllowed(request.AgeRestriction, AgeRestrictionOptions))
+        {
+            message = "Age restriction is not a supported option.";
+            return false;
+        }
+
+        message = "";
+        return true;
     }
 
     public static decimal Average(DailyCheckIn[] items, Func<DailyCheckIn, int> selector) =>
@@ -142,7 +203,21 @@ public static class ApiMapping
             evt.ExternalBookingUrl,
             evt.ImageUrl,
             evt.Status,
-            evt.Tags);
+            evt.Tags,
+            evt.BringItems,
+            evt.BringNotes,
+            evt.Facilities,
+            evt.AccessibilityFeatures,
+            evt.PhysicalIntensity,
+            evt.SocialInteractionLevel,
+            evt.ExperienceLevel,
+            evt.AtmosphereTags,
+            evt.FoodProvided,
+            evt.DrinksProvided,
+            evt.DietaryOptions,
+            evt.FoodNotes,
+            evt.AgeRestriction,
+            evt.SafetyNotes);
 
     public static IQueryable<CommunityDto> ProjectCommunities(IQueryable<Community> query, WithinDbContext db, Guid? userId) =>
         query.Select(item => new CommunityDto(
@@ -174,4 +249,30 @@ public static class ApiMapping
         join user in db.Users on comment.AuthorUserId equals user.Id
         orderby comment.CreatedUtc
         select new CommentDto(comment.Id, comment.ParentCommentId, user.DisplayName, comment.Body, comment.CreatedUtc);
+
+    private static string[] NormalizeList(string[]? values) =>
+        values is null
+            ? []
+            : values.Select(value => value.Trim().ToLowerInvariant())
+                .Where(value => value.Length > 0)
+                .Distinct()
+                .ToArray();
+
+    private static string? NormalizeNullable(string? value)
+    {
+        var trimmed = value?.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+    }
+
+    private static string? NormalizeSingle(string? value)
+    {
+        var trimmed = value?.Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+    }
+
+    private static bool IsAllowed(string? value, HashSet<string> allowed)
+    {
+        var normalized = NormalizeSingle(value);
+        return normalized is null || allowed.Contains(normalized);
+    }
 }

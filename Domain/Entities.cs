@@ -51,7 +51,8 @@ public enum NotificationKind
     CommentReply,
     UserMention,
     EventReminder,
-    CircleJoinRequest
+    CircleJoinRequest,
+    CircleInvite
 }
 
 public enum NotificationTargetType
@@ -270,6 +271,41 @@ public enum CirclePostVisibility
     Private
 }
 
+public enum CirclePostType
+{
+    Standard,
+    System,
+    Announcement,
+    EventShare,
+    WeeklyCheckIn,
+    Poll
+}
+
+public enum CircleReactionType
+{
+    Support,
+    Grateful,
+    Inspired,
+    Motivated,
+    Growing
+}
+
+public enum WeeklyCheckInMood
+{
+    Great,
+    Good,
+    Okay,
+    Struggling
+}
+
+public enum CircleInviteStatus
+{
+    Pending,
+    Accepted,
+    Declined,
+    Cancelled
+}
+
 public enum UserReportStatus
 {
     Open,
@@ -420,6 +456,20 @@ public sealed class Event
     public string? ImageUrl { get; set; }
     public EventStatus Status { get; set; }
     public string[] Tags { get; set; } = [];
+    public string[] BringItems { get; set; } = [];
+    public string? BringNotes { get; set; }
+    public string[] Facilities { get; set; } = [];
+    public string[] AccessibilityFeatures { get; set; } = [];
+    public string? PhysicalIntensity { get; set; }
+    public string? SocialInteractionLevel { get; set; }
+    public string? ExperienceLevel { get; set; }
+    public string[] AtmosphereTags { get; set; } = [];
+    public bool FoodProvided { get; set; }
+    public bool DrinksProvided { get; set; }
+    public string[] DietaryOptions { get; set; } = [];
+    public string? FoodNotes { get; set; }
+    public string? AgeRestriction { get; set; }
+    public string? SafetyNotes { get; set; }
     public DateTimeOffset CreatedUtc { get; set; }
 }
 
@@ -575,6 +625,7 @@ public sealed class Circle
     public string Name { get; set; } = "";
     public string Slug { get; set; } = "";
     public string Description { get; set; } = "";
+    public string? Rules { get; set; }
     public Guid CreatedByUserId { get; set; }
     public CircleType Type { get; set; } = CircleType.Platform;
     public CircleVisibility Visibility { get; set; } = CircleVisibility.Public;
@@ -631,9 +682,14 @@ public sealed class CircleThread
     public Guid CircleId { get; set; }
     public Guid UserId { get; set; }
     public CommunityPostType ThreadType { get; set; } = CommunityPostType.AskCommunity;
+    public CirclePostType PostType { get; set; } = CirclePostType.Standard;
     public string Title { get; set; } = "";
     public string Body { get; set; } = "";
     public Guid? LinkedEventId { get; set; }
+    public bool IsPinned { get; set; }
+    public bool IsAnonymous { get; set; }
+    public string? ImageUrl { get; set; }
+    public DateOnly? WeeklyCheckInWeekStart { get; set; }
     public CommunityContentStatus Status { get; set; } = CommunityContentStatus.Active;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -646,6 +702,7 @@ public sealed class CircleThreadComment
     public Guid ThreadId { get; set; }
     public Guid UserId { get; set; }
     public string Body { get; set; } = "";
+    public bool IsAnonymous { get; set; }
     public CommunityContentStatus Status { get; set; } = CommunityContentStatus.Active;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -670,6 +727,64 @@ public sealed class CircleHelpfulReaction
     public Guid? ThreadId { get; set; }
     public Guid? CommentId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CircleReaction
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid? ThreadId { get; set; }
+    public Guid? CommentId { get; set; }
+    public CircleReactionType ReactionType { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CirclePoll
+{
+    public Guid Id { get; set; }
+    public Guid ThreadId { get; set; }
+    public string Question { get; set; } = "";
+    public DateTimeOffset? ClosesAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CirclePollOption
+{
+    public Guid Id { get; set; }
+    public Guid PollId { get; set; }
+    public string Text { get; set; } = "";
+    public int SortOrder { get; set; }
+}
+
+public sealed class CirclePollVote
+{
+    public Guid Id { get; set; }
+    public Guid PollId { get; set; }
+    public Guid OptionId { get; set; }
+    public Guid UserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CircleWeeklyCheckInResponse
+{
+    public Guid Id { get; set; }
+    public Guid ThreadId { get; set; }
+    public Guid UserId { get; set; }
+    public WeeklyCheckInMood Mood { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public sealed class CircleInvite
+{
+    public Guid Id { get; set; }
+    public Guid CircleId { get; set; }
+    public Guid InvitedByUserId { get; set; }
+    public Guid InvitedUserId { get; set; }
+    public CircleInviteStatus Status { get; set; } = CircleInviteStatus.Pending;
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? RespondedAt { get; set; }
 }
 
 public sealed class CircleReport
