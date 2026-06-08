@@ -46,20 +46,69 @@ public static class ApiMapping
         DailyBalanceScore = checkIn.DailyBalanceScore
     };
 
-    public static ProviderDto ToDto(this Provider provider) => new(
+    public static ProviderDto ToDto(this Provider provider, int serviceCount = 0, bool publicSafe = true) => new(
         provider.Id,
         provider.Name,
         provider.Slug,
+        provider.ProviderType,
+        publicSafe ? null : provider.LegalName,
         provider.Bio,
         provider.Lens,
+        provider.Categories,
+        provider.ProfileImageUrl,
+        provider.CoverImageUrl,
         provider.Location,
-        provider.WebsiteUrl,
+        provider.Suburb,
+        provider.City,
+        provider.State,
+        provider.Country,
+        provider.ShowWebsitePublicly || !publicSafe ? provider.WebsiteUrl : null,
         provider.InstagramUrl,
-        provider.IsVerified);
+        provider.ShowPhonePublicly || !publicSafe ? provider.Phone : null,
+        provider.ShowEmailPublicly || !publicSafe ? provider.Email : null,
+        provider.IsVerified,
+        provider.VerificationStatus,
+        provider.IsActive,
+        provider.ShowEmailPublicly,
+        provider.ShowPhonePublicly,
+        provider.ShowWebsitePublicly,
+        provider.PractitionerTitle,
+        provider.YearsExperience,
+        provider.Qualifications,
+        provider.ServicesOffered,
+        provider.Languages,
+        provider.OnlineAvailable,
+        provider.InPersonAvailable,
+        provider.BusinessType,
+        publicSafe ? null : provider.Abn,
+        provider.Facilities,
+        provider.AccessibilityFeatures,
+        provider.TeamMembers,
+        provider.OpeningHours,
+        serviceCount,
+        provider.CreatedUtc,
+        provider.UpdatedUtc);
+
+    public static ProviderServiceDto ToDto(this ProviderService service) => new(
+        service.Id,
+        service.ProviderId,
+        service.Name,
+        service.Description,
+        service.Lens,
+        service.Category,
+        service.DurationMinutes,
+        service.PriceAmount,
+        service.PriceType,
+        service.DeliveryMode,
+        service.Location,
+        service.IsActive,
+        service.CreatedUtc,
+        service.UpdatedUtc);
 
     public static ProviderApplicationDto ToDto(this ProviderApplication application, string? temporaryPassword = null) => new(
         application.Id,
         application.Status,
+        application.ProviderType,
         application.ProviderCategory,
         application.PrimaryLens,
         application.ServiceAreas,
@@ -117,6 +166,7 @@ public static class ApiMapping
         evt.Title = request.Title.Trim();
         evt.Description = request.Description.Trim();
         evt.Lens = request.Lens;
+        evt.ProviderServiceId = request.ProviderServiceId;
         evt.LocationName = request.LocationName.Trim();
         evt.IsOnline = request.IsOnline;
         evt.StartUtc = request.StartUtc;
@@ -180,11 +230,38 @@ public static class ApiMapping
 
     public static IQueryable<EventDto> ProjectEvents(IQueryable<Event> query, WithinDbContext db, Guid? userId) =>
         from evt in query
-        join provider in db.Providers on evt.ProviderId equals provider.Id
-        select new EventDto(
+            join provider in db.Providers on evt.ProviderId equals provider.Id
+            let providerService = db.ProviderServices.FirstOrDefault(service => service.Id == evt.ProviderServiceId && service.IsActive)
+            select new EventDto(
             evt.Id,
             evt.ProviderId,
+            evt.ProviderServiceId,
             provider.Name,
+            new ProviderSummaryDto(
+                provider.Id,
+                provider.Name,
+                provider.ProviderType,
+                provider.Lens,
+                provider.Location,
+                provider.IsVerified,
+                provider.VerificationStatus),
+            providerService == null
+                ? null
+                : new ProviderServiceDto(
+                    providerService.Id,
+                    providerService.ProviderId,
+                    providerService.Name,
+                    providerService.Description,
+                    providerService.Lens,
+                    providerService.Category,
+                    providerService.DurationMinutes,
+                    providerService.PriceAmount,
+                    providerService.PriceType,
+                    providerService.DeliveryMode,
+                    providerService.Location,
+                    providerService.IsActive,
+                    providerService.CreatedUtc,
+                    providerService.UpdatedUtc),
             evt.Title,
             evt.Description,
             evt.Lens,

@@ -50,6 +50,10 @@ public static class EventEndpoints
 
             var provider = await db.Providers.FirstOrDefaultAsync(item => item.OwnerUserId == principal.UserId());
             if (provider is null) return Results.Forbid();
+            if (!await ProviderServiceBelongsToProvider(db, request.ProviderServiceId, provider.Id))
+            {
+                return Results.BadRequest(new { message = "Provider service was not found for this provider." });
+            }
 
             var evt = request.ToEntity(provider.Id);
             db.Events.Add(evt);
@@ -65,6 +69,10 @@ public static class EventEndpoints
             var provider = evt is null ? null : await db.Providers.FindAsync(evt.ProviderId);
             if (evt is null || provider is null) return Results.NotFound();
             if (provider.OwnerUserId != principal.UserId()) return Results.Forbid();
+            if (!await ProviderServiceBelongsToProvider(db, request.ProviderServiceId, provider.Id))
+            {
+                return Results.BadRequest(new { message = "Provider service was not found for this provider." });
+            }
 
             request.ApplyTo(evt);
             await db.SaveChangesAsync();
@@ -307,6 +315,9 @@ public static class EventEndpoints
 
         return (await privacy.GetOrCreateSettings(userId)).DefaultRsvpVisibility;
     }
+
+    private static async Task<bool> ProviderServiceBelongsToProvider(WithinDbContext db, Guid? serviceId, Guid providerId) =>
+        serviceId is null || await db.ProviderServices.AnyAsync(item => item.Id == serviceId && item.ProviderId == providerId && item.IsActive);
 
     private static async Task<EventAttendeeDto> ToAttendeeDto(WithinDbContext db, EventRegistration registration)
     {

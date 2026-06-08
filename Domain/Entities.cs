@@ -92,6 +92,35 @@ public enum ProviderCategory
     CorporateWorkplaceWellness
 }
 
+public enum ProviderType
+{
+    Individual,
+    Business
+}
+
+public enum ProviderVerificationStatus
+{
+    Unverified,
+    Pending,
+    Verified,
+    Rejected
+}
+
+public enum ProviderPriceType
+{
+    Free,
+    Fixed,
+    FromPrice,
+    ContactProvider
+}
+
+public enum ProviderServiceDeliveryMode
+{
+    InPerson,
+    Online,
+    Hybrid
+}
+
 public enum CommunityPostType
 {
     AskCommunity,
@@ -384,19 +413,68 @@ public sealed class Provider
     public Guid OwnerUserId { get; set; }
     public string Name { get; set; } = "";
     public string Slug { get; set; } = "";
+    public ProviderType ProviderType { get; set; } = ProviderType.Business;
+    public string? LegalName { get; set; }
     public string Bio { get; set; } = "";
     public WithinLens Lens { get; set; }
+    public string[] Categories { get; set; } = [];
+    public string? ProfileImageUrl { get; set; }
+    public string? CoverImageUrl { get; set; }
     public string Location { get; set; } = "";
+    public string? Suburb { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? Country { get; set; }
     public string? WebsiteUrl { get; set; }
     public string? InstagramUrl { get; set; }
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
     public bool IsVerified { get; set; }
+    public ProviderVerificationStatus VerificationStatus { get; set; } = ProviderVerificationStatus.Unverified;
+    public bool IsActive { get; set; } = true;
+    public bool ShowEmailPublicly { get; set; }
+    public bool ShowPhonePublicly { get; set; }
+    public bool ShowWebsitePublicly { get; set; } = true;
+    public string? PractitionerTitle { get; set; }
+    public int? YearsExperience { get; set; }
+    public string? Qualifications { get; set; }
+    public string[] ServicesOffered { get; set; } = [];
+    public string[] Languages { get; set; } = [];
+    public bool OnlineAvailable { get; set; }
+    public bool InPersonAvailable { get; set; } = true;
+    public string? BusinessType { get; set; }
+    public string? Abn { get; set; }
+    public string[] Facilities { get; set; } = [];
+    public string[] AccessibilityFeatures { get; set; } = [];
+    public string[] TeamMembers { get; set; } = [];
+    public string? OpeningHours { get; set; }
     public DateTimeOffset CreatedUtc { get; set; }
+    public DateTimeOffset UpdatedUtc { get; set; }
+}
+
+public sealed class ProviderService
+{
+    public Guid Id { get; set; }
+    public Guid ProviderId { get; set; }
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    public WithinLens Lens { get; set; }
+    public string Category { get; set; } = "";
+    public int? DurationMinutes { get; set; }
+    public decimal? PriceAmount { get; set; }
+    public ProviderPriceType PriceType { get; set; } = ProviderPriceType.ContactProvider;
+    public ProviderServiceDeliveryMode DeliveryMode { get; set; } = ProviderServiceDeliveryMode.InPerson;
+    public string? Location { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedUtc { get; set; }
+    public DateTimeOffset UpdatedUtc { get; set; }
 }
 
 public sealed class ProviderApplication
 {
     public Guid Id { get; set; }
     public ProviderApplicationStatus Status { get; set; } = ProviderApplicationStatus.Submitted;
+    public ProviderType ProviderType { get; set; } = ProviderType.Business;
     public ProviderCategory ProviderCategory { get; set; }
     public WithinLens PrimaryLens { get; set; }
     public string[] ServiceAreas { get; set; } = [];
@@ -441,6 +519,7 @@ public sealed class Event
 {
     public Guid Id { get; set; }
     public Guid ProviderId { get; set; }
+    public Guid? ProviderServiceId { get; set; }
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
     public WithinLens Lens { get; set; }

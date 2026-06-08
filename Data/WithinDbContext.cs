@@ -9,6 +9,7 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Provider> Providers => Set<Provider>();
+    public DbSet<ProviderService> ProviderServices => Set<ProviderService>();
     public DbSet<ProviderApplication> ProviderApplications => Set<ProviderApplication>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<EventRegistration> EventRegistrations => Set<EventRegistration>();
@@ -73,6 +74,10 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.HasPostgresEnum<NotificationMuteTargetType>();
         modelBuilder.HasPostgresEnum<ProviderApplicationStatus>();
         modelBuilder.HasPostgresEnum<ProviderCategory>();
+        modelBuilder.HasPostgresEnum<ProviderType>();
+        modelBuilder.HasPostgresEnum<ProviderVerificationStatus>();
+        modelBuilder.HasPostgresEnum<ProviderPriceType>();
+        modelBuilder.HasPostgresEnum<ProviderServiceDeliveryMode>();
         modelBuilder.HasPostgresEnum<CommunityPostType>();
         modelBuilder.HasPostgresEnum<CommunityContentStatus>();
         modelBuilder.HasPostgresEnum<CommunityReportReason>();
@@ -113,14 +118,51 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.Entity<Provider>(entity =>
         {
             entity.HasIndex(item => item.OwnerUserId);
+            entity.HasIndex(item => new { item.ProviderType, item.Lens, item.IsActive });
+            entity.HasIndex(item => new { item.VerificationStatus, item.CreatedUtc });
+            entity.Property(item => item.ProviderType).HasDefaultValue(ProviderType.Business);
+            entity.Property(item => item.VerificationStatus).HasDefaultValue(ProviderVerificationStatus.Unverified);
             entity.Property(item => item.Name).HasMaxLength(180);
             entity.Property(item => item.Slug).HasMaxLength(180);
             entity.HasIndex(item => item.Slug).IsUnique();
+            entity.Property(item => item.LegalName).HasMaxLength(180);
+            entity.Property(item => item.Categories).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.ProfileImageUrl).HasMaxLength(1000);
+            entity.Property(item => item.CoverImageUrl).HasMaxLength(1000);
+            entity.Property(item => item.Location).HasMaxLength(180);
+            entity.Property(item => item.Suburb).HasMaxLength(120);
+            entity.Property(item => item.City).HasMaxLength(120);
+            entity.Property(item => item.State).HasMaxLength(80);
+            entity.Property(item => item.Country).HasMaxLength(80);
+            entity.Property(item => item.Phone).HasMaxLength(80);
+            entity.Property(item => item.Email).HasMaxLength(320);
+            entity.Property(item => item.IsActive).HasDefaultValue(true);
+            entity.Property(item => item.ShowWebsitePublicly).HasDefaultValue(true);
+            entity.Property(item => item.PractitionerTitle).HasMaxLength(120);
+            entity.Property(item => item.ServicesOffered).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.Languages).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.InPersonAvailable).HasDefaultValue(true);
+            entity.Property(item => item.BusinessType).HasMaxLength(120);
+            entity.Property(item => item.Abn).HasMaxLength(40);
+            entity.Property(item => item.Facilities).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.AccessibilityFeatures).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.TeamMembers).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+        });
+
+        modelBuilder.Entity<ProviderService>(entity =>
+        {
+            entity.HasIndex(item => new { item.ProviderId, item.IsActive });
+            entity.HasIndex(item => new { item.Lens, item.DeliveryMode, item.IsActive });
+            entity.Property(item => item.Name).HasMaxLength(160);
+            entity.Property(item => item.Category).HasMaxLength(120);
+            entity.Property(item => item.Location).HasMaxLength(180);
         });
 
         modelBuilder.Entity<ProviderApplication>(entity =>
         {
             entity.HasIndex(item => new { item.Status, item.SubmittedUtc });
+            entity.HasIndex(item => item.ProviderType);
+            entity.Property(item => item.ProviderType).HasDefaultValue(ProviderType.Business);
             entity.HasIndex(item => item.ContactEmail);
             entity.Property(item => item.ContactName).HasMaxLength(180);
             entity.Property(item => item.ContactEmail).HasMaxLength(320);
@@ -144,6 +186,7 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         {
             entity.HasIndex(item => new { item.Lens, item.StartUtc });
             entity.HasIndex(item => item.ProviderId);
+            entity.HasIndex(item => item.ProviderServiceId);
             entity.Property(item => item.Tags).HasColumnType("text[]");
             entity.Property(item => item.BringItems).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
             entity.Property(item => item.Facilities).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());

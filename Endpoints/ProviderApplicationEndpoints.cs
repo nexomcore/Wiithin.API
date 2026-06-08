@@ -20,10 +20,14 @@ public static class ProviderApplicationEndpoints
             if (validation is not null) return validation;
 
             var now = DateTimeOffset.UtcNow;
+            var providerType = request.ProviderType == ProviderType.Individual && request.ProviderCategory != ProviderCategory.IndividualPractitioner
+                ? ProviderRules.InferProviderType(request.ProviderCategory)
+                : request.ProviderType;
             var application = new ProviderApplication
             {
                 Id = Guid.NewGuid(),
                 Status = ProviderApplicationStatus.Submitted,
+                ProviderType = providerType,
                 ProviderCategory = request.ProviderCategory,
                 PrimaryLens = request.PrimaryLens,
                 ServiceAreas = Clean(request.ServiceAreas),
@@ -144,15 +148,32 @@ public static class ProviderApplicationEndpoints
                     OwnerUserId = user.Id,
                     Name = application.ProviderName,
                     Slug = await CreateUniqueProviderSlug(db, application.ProviderName),
+                    ProviderType = application.ProviderType,
                     Bio = application.Bio,
                     Lens = application.PrimaryLens,
+                    Categories = application.ServiceAreas,
                     Location = application.Location,
                     WebsiteUrl = application.WebsiteUrl,
                     InstagramUrl = application.InstagramUrl,
+                    Phone = application.ContactPhone,
+                    Email = application.ContactEmail,
+                    ShowWebsitePublicly = true,
+                    PractitionerTitle = application.ProviderType == ProviderType.Individual ? application.BusinessType : null,
+                    Qualifications = application.Certifications,
+                    ServicesOffered = application.ServicesOffered,
+                    OnlineAvailable = application.DeliveryModes.Any(item => item.Contains("online", StringComparison.OrdinalIgnoreCase) || item.Contains("hybrid", StringComparison.OrdinalIgnoreCase)),
+                    InPersonAvailable = application.DeliveryModes.Any(item => item.Contains("person", StringComparison.OrdinalIgnoreCase) || item.Contains("mobile", StringComparison.OrdinalIgnoreCase) || item.Contains("hybrid", StringComparison.OrdinalIgnoreCase)),
+                    BusinessType = application.ProviderType == ProviderType.Business ? application.BusinessType : null,
+                    Abn = application.Abn,
+                    Facilities = SplitOptionalList(application.VenueNames),
                     IsVerified = true,
+                    VerificationStatus = ProviderVerificationStatus.Verified,
+                    IsActive = true,
                     CreatedUtc = DateTimeOffset.UtcNow
                 };
+                provider.UpdatedUtc = provider.CreatedUtc;
                 db.Providers.Add(provider);
+                AddStarterServices(db, provider, application, provider.CreatedUtc);
                 application.ApprovedProviderId = provider.Id;
             }
 
@@ -187,26 +208,46 @@ public static class ProviderApplicationEndpoints
         AddMissing(missing, request.ContactName, "contactName");
         AddMissing(missing, request.ContactEmail, "contactEmail");
         AddMissing(missing, request.ProviderName, "providerName");
-        AddMissing(missing, request.BusinessType, "businessType");
         AddMissing(missing, request.Location, "location");
-        AddMissing(missing, request.YearsPracticing, "yearsPracticing");
-        AddMissing(missing, request.TypicalAudience, "typicalAudience");
         AddMissing(missing, request.Bio, "bio");
-        AddMissing(missing, request.JoinReason, "joinReason");
-        AddMissing(missing, request.Certifications, "certifications");
-        AddMissing(missing, request.InsuranceStatus, "insuranceStatus");
-        AddMissing(missing, request.WorkingWithChildrenCheck, "workingWithChildrenCheck");
-        AddMissing(missing, request.FirstAidCpr, "firstAidCpr");
-        AddMissing(missing, request.HasEventsReady, "hasEventsReady");
-        AddMissing(missing, request.ExpectedFirstEvent, "expectedFirstEvent");
-        AddMissing(missing, request.BookingTools, "bookingTools");
 
-        if (request.ServiceAreas.Length == 0) missing.Add("serviceAreas");
-        if (request.DeliveryModes.Length == 0) missing.Add("deliveryModes");
+        if (request.ProviderType == ProviderType.Individual && string.IsNullOrWhiteSpace(request.BusinessType)) missing.Add("practitionerTitle");
+        if (request.ProviderType == ProviderType.Business && string.IsNullOrWhiteSpace(request.BusinessType)) missing.Add("businessType");
         if (request.ServicesOffered.Length == 0) missing.Add("servicesOffered");
         if (!request.DeclarationAccepted) missing.Add("declarationAccepted");
 
         return missing.Count == 0 ? null : Results.BadRequest(new { message = "Required fields are missing.", fields = missing });
+    }
+
+    private static void AddStarterServices(WithinDbContext db, Provider provider, ProviderApplication application, DateTimeOffset now)
+    {
+        foreach (var serviceName in application.ServicesOffered.Take(6))
+        {
+            var name = serviceName.Trim();
+            if (string.IsNullOrWhiteSpace(name)) continue;
+            var mode = application.DeliveryModes.Any(item => item.Contains("hybrid", StringComparison.OrdinalIgnoreCase))
+                ? ProviderServiceDeliveryMode.Hybrid
+                : application.DeliveryModes.Any(item => item.Contains("online", StringComparison.OrdinalIgnoreCase))
+                    ? ProviderServiceDeliveryMode.Online
+                    : ProviderServiceDeliveryMode.InPerson;
+            db.ProviderServices.Add(new ProviderService
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                Name = name,
+                Description = application.ProviderType == ProviderType.Individual
+                    ? $"A {provider.Name} service offered through Within."
+                    : $"A service offered by {provider.Name}.",
+                Lens = application.PrimaryLens,
+                Category = name,
+                PriceType = ProviderPriceType.ContactProvider,
+                DeliveryMode = mode,
+                Location = application.Location,
+                IsActive = true,
+                CreatedUtc = now,
+                UpdatedUtc = now
+            });
+        }
     }
 
     private static void AddMissing(List<string> missing, string? value, string field)
@@ -216,6 +257,11 @@ public static class ProviderApplicationEndpoints
 
     private static string[] Clean(string[] values) =>
         values.Select(item => item.Trim()).Where(item => item.Length > 0).Distinct().ToArray();
+
+    private static string[] SplitOptionalList(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? []
+            : value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
     private static string? CleanOptional(string? value)
     {
