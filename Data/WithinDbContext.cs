@@ -34,6 +34,11 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
     public DbSet<CircleHelpfulReaction> CircleHelpfulReactions => Set<CircleHelpfulReaction>();
     public DbSet<CircleReport> CircleReports => Set<CircleReport>();
     public DbSet<CircleGuideline> CircleGuidelines => Set<CircleGuideline>();
+    public DbSet<Connection> Connections => Set<Connection>();
+    public DbSet<UserPrivacySettings> UserPrivacySettings => Set<UserPrivacySettings>();
+    public DbSet<EventInvite> EventInvites => Set<EventInvite>();
+    public DbSet<Mention> Mentions => Set<Mention>();
+    public DbSet<UserReport> UserReports => Set<UserReport>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
@@ -65,6 +70,19 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.HasPostgresEnum<CircleMemberStatus>();
         modelBuilder.HasPostgresEnum<CircleRoleKind>();
         modelBuilder.HasPostgresEnum<CircleEventStatus>();
+        modelBuilder.HasPostgresEnum<ConnectionStatus>();
+        modelBuilder.HasPostgresEnum<ProfileVisibility>();
+        modelBuilder.HasPostgresEnum<RsvpVisibility>();
+        modelBuilder.HasPostgresEnum<TaggingPermission>();
+        modelBuilder.HasPostgresEnum<FriendRequestPermission>();
+        modelBuilder.HasPostgresEnum<EventInviteStatus>();
+        modelBuilder.HasPostgresEnum<MentionSourceType>();
+        modelBuilder.HasPostgresEnum<CircleIdentityMode>();
+        modelBuilder.HasPostgresEnum<CirclePrivacyType>();
+        modelBuilder.HasPostgresEnum<MemberListVisibility>();
+        modelBuilder.HasPostgresEnum<CirclePostVisibility>();
+        modelBuilder.HasPostgresEnum<UserReportStatus>();
+        modelBuilder.HasPostgresEnum<UserReportReason>();
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -108,6 +126,11 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
             entity.HasIndex(item => new { item.Lens, item.StartUtc });
             entity.HasIndex(item => item.ProviderId);
             entity.Property(item => item.Tags).HasColumnType("text[]");
+        });
+
+        modelBuilder.Entity<EventRegistration>(entity =>
+        {
+            entity.Property(item => item.Visibility).HasDefaultValue(RsvpVisibility.FriendsOnly);
         });
 
         modelBuilder.Entity<Comment>(entity =>
@@ -175,12 +198,19 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
             entity.Property(item => item.Name).HasMaxLength(120);
             entity.Property(item => item.Slug).HasMaxLength(120);
             entity.Property(item => item.Description).HasMaxLength(600);
+            entity.Property(item => item.AllowPseudonyms).HasDefaultValue(true);
+            entity.Property(item => item.AllowHiddenProfiles).HasDefaultValue(true);
+            entity.Property(item => item.AllowAnonymousPosts).HasDefaultValue(false);
+            entity.Property(item => item.MemberListVisibility).HasDefaultValue(MemberListVisibility.MembersOnly);
+            entity.Property(item => item.DefaultPostVisibility).HasDefaultValue(CirclePostVisibility.MembersOnly);
+            entity.Property(item => item.DefaultEventRsvpVisibility).HasDefaultValue(RsvpVisibility.FriendsOnly);
         });
 
         modelBuilder.Entity<CircleMember>(entity =>
         {
             entity.HasIndex(item => new { item.CircleId, item.UserId }).IsUnique();
             entity.HasIndex(item => new { item.UserId, item.Status });
+            entity.Property(item => item.DisplayNameOverride).HasMaxLength(40);
         });
 
         modelBuilder.Entity<CircleRole>(entity =>
@@ -237,6 +267,38 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
             entity.HasIndex(item => new { item.CircleId, item.SortOrder });
             entity.Property(item => item.Title).HasMaxLength(120);
             entity.Property(item => item.Body).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<Connection>(entity =>
+        {
+            entity.HasIndex(item => new { item.RequesterUserId, item.ReceiverUserId });
+            entity.HasIndex(item => new { item.ReceiverUserId, item.Status });
+            entity.HasIndex(item => new { item.RequesterUserId, item.Status });
+        });
+
+        modelBuilder.Entity<UserPrivacySettings>(entity =>
+        {
+            entity.HasKey(item => item.UserId);
+        });
+
+        modelBuilder.Entity<EventInvite>(entity =>
+        {
+            entity.HasIndex(item => new { item.EventId, item.InvitedUserId, item.Status });
+            entity.HasIndex(item => new { item.InvitedUserId, item.Status });
+            entity.Property(item => item.Message).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<Mention>(entity =>
+        {
+            entity.HasIndex(item => new { item.MentionedUserId, item.CreatedAt });
+            entity.HasIndex(item => new { item.SourceType, item.SourceId });
+        });
+
+        modelBuilder.Entity<UserReport>(entity =>
+        {
+            entity.HasIndex(item => new { item.ReportedUserId, item.Status });
+            entity.HasIndex(item => new { item.ReportedByUserId, item.CreatedAt });
+            entity.Property(item => item.Details).HasMaxLength(1000);
         });
 
         modelBuilder.Entity<DailyCheckIn>(entity =>

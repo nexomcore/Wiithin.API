@@ -128,6 +128,7 @@ public sealed record EventDto(
     int GoingCount,
     bool IsSaved,
     EventJoinState? JoinState,
+    RsvpVisibility? RsvpVisibility,
     SignupType SignupType,
     string? ExternalBookingUrl,
     string? ImageUrl,
@@ -177,6 +178,20 @@ public sealed record UpsertEventDto(
     string[] Tags);
 
 public sealed record JoinEventDto(EventJoinState State);
+
+public sealed record EventRsvpDto(EventJoinState State, RsvpVisibility? Visibility = null);
+
+public sealed record RsvpVisibilityDto(RsvpVisibility Visibility);
+
+public sealed record EventAttendeeDto(
+    Guid UserId,
+    string DisplayName,
+    EventJoinState State,
+    RsvpVisibility Visibility,
+    bool IsPrivate,
+    DateTimeOffset UpdatedUtc);
+
+public sealed record FriendsGoingDto(int Count, EventAttendeeDto[] Friends);
 
 public sealed record CommunityDto(
     Guid Id,
@@ -383,6 +398,71 @@ public sealed record CircleReportDto(
     DateTimeOffset? ReviewedAt);
 
 public sealed record CircleReviewReportDto(CommunityReportStatus Status);
+
+public sealed record ConnectionDto(
+    Guid Id,
+    Guid OtherUserId,
+    string OtherDisplayName,
+    ConnectionStatus Status,
+    bool IsRequester,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record UserSearchResultDto(
+    Guid Id,
+    string DisplayName,
+    WithinRole Role,
+    ConnectionStatus? ConnectionStatus,
+    bool IsRequester);
+
+public sealed record ConnectionRequestDto(Guid ReceiverUserId);
+
+public sealed record BlockUserDto(Guid UserId);
+
+public sealed record UserReportRequestDto(
+    Guid ReportedUserId,
+    UserReportReason Reason,
+    string? Details,
+    MentionSourceType? SourceType,
+    Guid? SourceId);
+
+public sealed record UserPrivacySettingsDto(
+    ProfileVisibility ProfileVisibility,
+    RsvpVisibility DefaultRsvpVisibility,
+    TaggingPermission TaggingPermission,
+    FriendRequestPermission FriendRequestPermission,
+    bool ShowActivityToFriends,
+    bool AllowEventInviteFromFriends);
+
+public sealed record EventInviteDto(
+    Guid Id,
+    Guid EventId,
+    string EventTitle,
+    CommunityAuthorDto InvitedBy,
+    CommunityAuthorDto InvitedUser,
+    EventInviteStatus Status,
+    string? Message,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record CreateEventInvitesDto(Guid[] InvitedUserIds, string? Message);
+
+public sealed record CircleIdentityDto(
+    Guid CircleId,
+    CircleIdentityMode IdentityMode,
+    string? DisplayNameOverride,
+    string DisplayName,
+    bool ProfileLinkAllowed);
+
+public sealed record UpdateCircleIdentityDto(CircleIdentityMode IdentityMode, string? DisplayNameOverride);
+
+public sealed record CircleMemberDto(
+    Guid UserId,
+    string DisplayName,
+    CircleIdentityMode IdentityMode,
+    bool ProfileLinkAllowed,
+    CircleMemberStatus Status,
+    DateTimeOffset JoinedAt);
 
 public sealed record ReviewDto(Guid Id, string AuthorName, int Rating, string Body, DateTimeOffset CreatedUtc);
 

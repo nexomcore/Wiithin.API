@@ -57,6 +57,7 @@ builder.Services.AddDbContext<WithinDbContext>(options =>
 
 builder.Services.AddSingleton<WellbeingScoringService>();
 builder.Services.AddScoped<AuthTokenService>();
+builder.Services.AddScoped<PrivacyService>();
 builder.Services.AddScoped<IMarketFitSubmissionService, MarketFitSubmissionService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

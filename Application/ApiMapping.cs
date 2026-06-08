@@ -137,6 +137,7 @@ public static class ApiMapping
             db.EventRegistrations.Count(reg => reg.EventId == evt.Id && reg.State == EventJoinState.Going),
             userId != null && db.SavedEvents.Any(saved => saved.EventId == evt.Id && saved.UserId == userId),
             userId == null ? null : db.EventRegistrations.Where(reg => reg.EventId == evt.Id && reg.UserId == userId).Select(reg => (EventJoinState?)reg.State).FirstOrDefault(),
+            userId == null ? null : db.EventRegistrations.Where(reg => reg.EventId == evt.Id && reg.UserId == userId).Select(reg => (RsvpVisibility?)reg.Visibility).FirstOrDefault(),
             evt.SignupType,
             evt.ExternalBookingUrl,
             evt.ImageUrl,

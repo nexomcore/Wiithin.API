@@ -44,6 +44,19 @@ public static class CircleSeedData
                 };
                 db.Circles.Add(circle);
             }
+            else
+            {
+                circle.Type = CircleType.Platform;
+                circle.Visibility = CircleVisibility.Public;
+                circle.Status = CircleStatus.Active;
+                circle.PrivacyType = CirclePrivacyType.Open;
+                circle.AllowPseudonyms = true;
+                circle.AllowHiddenProfiles = true;
+                circle.AllowAnonymousPosts = false;
+                circle.MemberListVisibility = MemberListVisibility.MembersOnly;
+                circle.DefaultPostVisibility = CirclePostVisibility.MembersOnly;
+                circle.DefaultEventRsvpVisibility = RsvpVisibility.FriendsOnly;
+            }
 
             if (!db.CircleGuidelines.Any(guideline => guideline.CircleId == circle.Id))
             {

@@ -6,6 +6,9 @@ public static class EndpointRegistrationExtensions
     {
         app.MapHealthEndpoints();
         app.MapAuthEndpoints();
+        app.MapUserEndpoints();
+        app.MapUserPrivacyEndpoints();
+        app.MapConnectionEndpoints();
         app.MapAdminEndpoints();
         app.MapMarketFitEndpoints();
         app.MapProviderApplicationEndpoints();

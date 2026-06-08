@@ -4,6 +4,7 @@ using WithinAPI.Application;
 using WithinAPI.Data;
 using WithinAPI.Domain;
 using WithinAPI.Models;
+using WithinAPI.Services;
 
 namespace WithinAPI.Endpoints;
 
@@ -103,6 +104,67 @@ public static class CircleEndpoints
             member.LeftAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
             return Results.NoContent();
+        }).RequireAuthorization();
+
+        circles.MapGet("/{circleId:guid}/me/identity", async (Guid circleId, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
+        {
+            var userId = principal.UserId();
+            var member = await db.CircleMembers.FirstOrDefaultAsync(item => item.CircleId == circleId && item.UserId == userId && item.Status == CircleMemberStatus.Active);
+            if (member is null) return Results.NotFound();
+            var identity = await privacy.GetDisplayIdentityForCircle(userId, circleId, userId);
+            return Results.Ok(new CircleIdentityDto(circleId, member.IdentityMode, member.DisplayNameOverride, identity.DisplayName, identity.ProfileLinkAllowed));
+        }).RequireAuthorization();
+
+        circles.MapPut("/{circleId:guid}/me/identity", async (Guid circleId, UpdateCircleIdentityDto request, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
+        {
+            var userId = principal.UserId();
+            var circle = await db.Circles.FindAsync(circleId);
+            if (circle is null) return Results.NotFound();
+            if (request.IdentityMode == CircleIdentityMode.Pseudonym && !circle.AllowPseudonyms) return Results.BadRequest(new { message = "This Circle does not allow nicknames." });
+            if (request.IdentityMode == CircleIdentityMode.HiddenProfile && !circle.AllowHiddenProfiles) return Results.BadRequest(new { message = "This Circle does not allow hidden profiles." });
+            if (request.IdentityMode == CircleIdentityMode.Pseudonym)
+            {
+                var name = request.DisplayNameOverride?.Trim();
+                if (string.IsNullOrWhiteSpace(name) || name.Length > 40) return Results.BadRequest(new { message = "Nickname is required and must be 40 characters or less." });
+                if (name.Contains("admin", StringComparison.OrdinalIgnoreCase) || name.Contains("within", StringComparison.OrdinalIgnoreCase)) return Results.BadRequest(new { message = "Choose a nickname that does not impersonate Within or admins." });
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var member = await db.CircleMembers.FirstOrDefaultAsync(item => item.CircleId == circleId && item.UserId == userId);
+            if (member is null)
+            {
+                member = new CircleMember { Id = Guid.NewGuid(), CircleId = circleId, UserId = userId, JoinedAt = now };
+                db.CircleMembers.Add(member);
+            }
+
+            member.Status = CircleMemberStatus.Active;
+            member.IdentityMode = request.IdentityMode;
+            member.DisplayNameOverride = request.IdentityMode == CircleIdentityMode.Pseudonym ? request.DisplayNameOverride?.Trim() : null;
+            member.UpdatedAt = now;
+            member.LeftAt = null;
+            await db.SaveChangesAsync();
+
+            var identity = await privacy.GetDisplayIdentityForCircle(userId, circleId, userId);
+            return Results.Ok(new CircleIdentityDto(circleId, member.IdentityMode, member.DisplayNameOverride, identity.DisplayName, identity.ProfileLinkAllowed));
+        }).RequireAuthorization();
+
+        circles.MapGet("/{circleId:guid}/members", async (Guid circleId, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
+        {
+            var viewerUserId = principal.UserId();
+            if (!await db.Circles.AnyAsync(item => item.Id == circleId)) return Results.NotFound();
+            if (!await privacy.CanViewCircleMember(viewerUserId, circleId, viewerUserId)) return Results.Forbid();
+            var members = await db.CircleMembers
+                .Where(item => item.CircleId == circleId && item.Status == CircleMemberStatus.Active)
+                .OrderBy(item => item.JoinedAt)
+                .ToArrayAsync();
+            var response = new List<CircleMemberDto>(members.Length);
+            foreach (var member in members)
+            {
+                if (!await privacy.CanViewCircleMember(viewerUserId, circleId, member.UserId)) continue;
+                var identity = await privacy.GetDisplayIdentityForCircle(viewerUserId, circleId, member.UserId);
+                response.Add(new CircleMemberDto(member.UserId, identity.DisplayName, identity.IdentityMode, identity.ProfileLinkAllowed, member.Status, member.JoinedAt));
+            }
+            return Results.Ok(response.ToArray());
         }).RequireAuthorization();
 
         circles.MapGet("/{circleId:guid}/threads", async (Guid circleId, int? page, int? pageSize, WithinDbContext db, ClaimsPrincipal principal) =>

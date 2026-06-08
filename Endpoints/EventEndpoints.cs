@@ -4,6 +4,7 @@ using WithinAPI.Application;
 using WithinAPI.Data;
 using WithinAPI.Domain;
 using WithinAPI.Models;
+using WithinAPI.Services;
 
 namespace WithinAPI.Endpoints;
 
@@ -66,7 +67,7 @@ public static class EventEndpoints
             return Results.Ok(await ApiMapping.ProjectEvents(db.Events.Where(item => item.Id == evt.Id), db, principal.UserId()).FirstAsync());
         }).RequireAuthorization();
 
-        events.MapPost("/{id:guid}/join", async (Guid id, JoinEventDto request, WithinDbContext db, ClaimsPrincipal principal) =>
+        events.MapPost("/{id:guid}/join", async (Guid id, JoinEventDto request, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
         {
             var userId = principal.UserId();
             var evt = await db.Events.FindAsync(id);
@@ -80,9 +81,44 @@ public static class EventEndpoints
             }
 
             registration.State = request.State;
+            if (registration.Visibility == default)
+            {
+                registration.Visibility = await DefaultRsvpVisibility(db, privacy, userId, id);
+            }
             registration.UpdatedUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
             return Results.Ok(await ApiMapping.ProjectEvents(db.Events.Where(item => item.Id == id), db, userId).FirstAsync());
+        }).RequireAuthorization();
+
+        events.MapPut("/{id:guid}/rsvp", async (Guid id, EventRsvpDto request, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
+        {
+            var userId = principal.UserId();
+            var evt = await db.Events.FindAsync(id);
+            if (evt is null) return Results.NotFound();
+
+            var registration = await db.EventRegistrations.FirstOrDefaultAsync(item => item.EventId == id && item.UserId == userId);
+            if (registration is null)
+            {
+                registration = new EventRegistration { Id = Guid.NewGuid(), EventId = id, UserId = userId, CreatedUtc = DateTimeOffset.UtcNow };
+                db.EventRegistrations.Add(registration);
+            }
+
+            registration.State = request.State;
+            registration.Visibility = request.Visibility ?? await DefaultRsvpVisibility(db, privacy, userId, id);
+            registration.UpdatedUtc = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+            return Results.Ok(await ApiMapping.ProjectEvents(db.Events.Where(item => item.Id == id), db, userId).FirstAsync());
+        }).RequireAuthorization();
+
+        events.MapPut("/{id:guid}/rsvp/visibility", async (Guid id, RsvpVisibilityDto request, WithinDbContext db, ClaimsPrincipal principal) =>
+        {
+            var userId = principal.UserId();
+            var registration = await db.EventRegistrations.FirstOrDefaultAsync(item => item.EventId == id && item.UserId == userId);
+            if (registration is null) return Results.NotFound();
+            registration.Visibility = request.Visibility;
+            registration.UpdatedUtc = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+            return Results.NoContent();
         }).RequireAuthorization();
 
         events.MapPost("/{id:guid}/save", async (Guid id, WithinDbContext db, ClaimsPrincipal principal) =>
@@ -103,6 +139,96 @@ public static class EventEndpoints
             await db.SavedEvents.Where(item => item.EventId == id && item.UserId == userId).ExecuteDeleteAsync();
             return Results.NoContent();
         }).RequireAuthorization();
+
+        events.MapGet("/{id:guid}/attendees", async (Guid id, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
+        {
+            var viewerUserId = principal.UserId();
+            var evt = await db.Events.FindAsync(id);
+            if (evt is null) return Results.NotFound();
+            var registrations = await db.EventRegistrations
+                .Where(item => item.EventId == id && item.State != EventJoinState.Declined)
+                .OrderByDescending(item => item.UpdatedUtc)
+                .ToArrayAsync();
+
+            var attendees = new List<EventAttendeeDto>();
+            foreach (var registration in registrations)
+            {
+                if (!await privacy.CanViewEventRsvp(viewerUserId, evt, registration)) continue;
+                attendees.Add(await ToAttendeeDto(db, registration));
+            }
+            return Results.Ok(attendees.ToArray());
+        }).RequireAuthorization();
+
+        events.MapGet("/{id:guid}/friends-going", async (Guid id, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
+        {
+            var viewerUserId = principal.UserId();
+            var evt = await db.Events.FindAsync(id);
+            if (evt is null) return Results.NotFound();
+            var registrations = await db.EventRegistrations
+                .Where(item => item.EventId == id && item.State == EventJoinState.Going && item.UserId != viewerUserId)
+                .OrderByDescending(item => item.UpdatedUtc)
+                .ToArrayAsync();
+
+            var friends = new List<EventAttendeeDto>();
+            foreach (var registration in registrations)
+            {
+                if (!await privacy.AreConnected(viewerUserId, registration.UserId)) continue;
+                if (!await privacy.CanViewEventRsvp(viewerUserId, evt, registration)) continue;
+                friends.Add(await ToAttendeeDto(db, registration));
+            }
+            return Results.Ok(new FriendsGoingDto(friends.Count, friends.ToArray()));
+        }).RequireAuthorization();
+
+        events.MapPost("/{id:guid}/invites", async (Guid id, CreateEventInvitesDto request, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
+        {
+            var inviterUserId = principal.UserId();
+            if (!await db.Events.AnyAsync(item => item.Id == id)) return Results.NotFound();
+            var now = DateTimeOffset.UtcNow;
+            var created = new List<EventInvite>();
+            foreach (var invitedUserId in request.InvitedUserIds.Distinct())
+            {
+                if (invitedUserId == inviterUserId) continue;
+                if (!await privacy.AreConnected(inviterUserId, invitedUserId)) continue;
+                if (await privacy.IsBlocked(inviterUserId, invitedUserId)) continue;
+                var invitedSettings = await privacy.GetOrCreateSettings(invitedUserId);
+                if (!invitedSettings.AllowEventInviteFromFriends) continue;
+                if (await db.EventInvites.AnyAsync(item => item.EventId == id && item.InvitedUserId == invitedUserId && item.Status == EventInviteStatus.Pending)) continue;
+
+                var invite = new EventInvite
+                {
+                    Id = Guid.NewGuid(),
+                    EventId = id,
+                    InvitedByUserId = inviterUserId,
+                    InvitedUserId = invitedUserId,
+                    Status = EventInviteStatus.Pending,
+                    Message = request.Message?.Trim(),
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+                db.EventInvites.Add(invite);
+                created.Add(invite);
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Ok(await ToInviteDtos(db, created.ToArray()));
+        }).RequireAuthorization();
+
+        events.MapGet("/invites", async (WithinDbContext db, ClaimsPrincipal principal) =>
+        {
+            var userId = principal.UserId();
+            var invites = await db.EventInvites
+                .Where(item => item.InvitedUserId == userId || item.InvitedByUserId == userId)
+                .OrderByDescending(item => item.CreatedAt)
+                .Take(100)
+                .ToArrayAsync();
+            return Results.Ok(await ToInviteDtos(db, invites));
+        }).RequireAuthorization();
+
+        events.MapPost("/invites/{inviteId:guid}/accept", async (Guid inviteId, WithinDbContext db, ClaimsPrincipal principal) =>
+            await UpdateInvite(db, principal.UserId(), inviteId, EventInviteStatus.Accepted)).RequireAuthorization();
+
+        events.MapPost("/invites/{inviteId:guid}/decline", async (Guid inviteId, WithinDbContext db, ClaimsPrincipal principal) =>
+            await UpdateInvite(db, principal.UserId(), inviteId, EventInviteStatus.Declined)).RequireAuthorization();
 
         events.MapGet("/{id:guid}/comments", async (Guid id, WithinDbContext db) =>
             Results.Ok(await ApiMapping.ProjectComments(db.Comments.Where(item => item.EventId == id && !item.IsHidden), db).ToArrayAsync()));
@@ -153,5 +279,67 @@ public static class EventEndpoints
         }).RequireAuthorization();
 
         return app;
+    }
+
+    private static async Task<RsvpVisibility> DefaultRsvpVisibility(WithinDbContext db, PrivacyService privacy, Guid userId, Guid eventId)
+    {
+        if (await db.CircleEvents.AnyAsync(item => item.EventId == eventId && item.Status == CircleEventStatus.Active && db.Circles.Any(circle => circle.Id == item.CircleId && circle.PrivacyType == CirclePrivacyType.Sensitive)))
+        {
+            return RsvpVisibility.Private;
+        }
+
+        return (await privacy.GetOrCreateSettings(userId)).DefaultRsvpVisibility;
+    }
+
+    private static async Task<EventAttendeeDto> ToAttendeeDto(WithinDbContext db, EventRegistration registration)
+    {
+        var user = await db.Users.FindAsync(registration.UserId);
+        return new EventAttendeeDto(
+            registration.UserId,
+            user?.DisplayName ?? "Within user",
+            registration.State,
+            registration.Visibility,
+            registration.Visibility == RsvpVisibility.Private,
+            registration.UpdatedUtc);
+    }
+
+    private static async Task<IResult> UpdateInvite(WithinDbContext db, Guid userId, Guid inviteId, EventInviteStatus status)
+    {
+        var invite = await db.EventInvites.FindAsync(inviteId);
+        if (invite is null) return Results.NotFound();
+        if (invite.InvitedUserId != userId || invite.Status != EventInviteStatus.Pending) return Results.Forbid();
+        invite.Status = status;
+        invite.RespondedAt = DateTimeOffset.UtcNow;
+        invite.UpdatedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    private static async Task<EventInviteDto[]> ToInviteDtos(WithinDbContext db, EventInvite[] invites)
+    {
+        var response = new List<EventInviteDto>(invites.Length);
+        foreach (var invite in invites)
+        {
+            var evt = await db.Events.FindAsync(invite.EventId);
+            response.Add(new EventInviteDto(
+                invite.Id,
+                invite.EventId,
+                evt?.Title ?? "Event",
+                await ToAuthorDto(db, invite.InvitedByUserId),
+                await ToAuthorDto(db, invite.InvitedUserId),
+                invite.Status,
+                invite.Message,
+                invite.CreatedAt,
+                invite.UpdatedAt));
+        }
+        return response.ToArray();
+    }
+
+    private static async Task<CommunityAuthorDto> ToAuthorDto(WithinDbContext db, Guid userId)
+    {
+        var user = await db.Users.FindAsync(userId);
+        if (user is null) return new CommunityAuthorDto(userId, "Within user", WithinRole.User, false);
+        var verified = user.Role == WithinRole.Provider && await db.Providers.AnyAsync(item => item.OwnerUserId == userId && item.IsVerified);
+        return new CommunityAuthorDto(user.Id, user.DisplayName, user.Role, verified);
     }
 }

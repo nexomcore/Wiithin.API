@@ -139,6 +139,111 @@ public enum CircleEventStatus
     Removed
 }
 
+public enum ConnectionStatus
+{
+    Pending,
+    Accepted,
+    Rejected,
+    Cancelled,
+    Removed,
+    Blocked
+}
+
+public enum ProfileVisibility
+{
+    Public,
+    FriendsOnly,
+    CircleMembersOnly,
+    Private
+}
+
+public enum RsvpVisibility
+{
+    Public,
+    FriendsOnly,
+    CircleMembersOnly,
+    Private
+}
+
+public enum TaggingPermission
+{
+    Everyone,
+    FriendsOnly,
+    CircleMembersOnly,
+    NoOne
+}
+
+public enum FriendRequestPermission
+{
+    Everyone,
+    FriendsOfFriends,
+    SameCircleOrEvent,
+    NoOne
+}
+
+public enum EventInviteStatus
+{
+    Pending,
+    Accepted,
+    Declined,
+    Cancelled
+}
+
+public enum MentionSourceType
+{
+    EventComment,
+    CirclePost,
+    CircleComment
+}
+
+public enum CircleIdentityMode
+{
+    RealProfile,
+    Pseudonym,
+    HiddenProfile
+}
+
+public enum CirclePrivacyType
+{
+    Open,
+    ApprovalRequired,
+    PrivateInviteOnly,
+    Sensitive
+}
+
+public enum MemberListVisibility
+{
+    Public,
+    MembersOnly,
+    AdminsOnly,
+    Hidden
+}
+
+public enum CirclePostVisibility
+{
+    Public,
+    MembersOnly,
+    Private
+}
+
+public enum UserReportStatus
+{
+    Open,
+    UnderReview,
+    Resolved,
+    Dismissed
+}
+
+public enum UserReportReason
+{
+    Harassment,
+    Spam,
+    HateOrAbuse,
+    Impersonation,
+    PrivacyConcern,
+    Other
+}
+
 public sealed class User
 {
     public Guid Id { get; set; }
@@ -257,6 +362,7 @@ public sealed class EventRegistration
     public Guid EventId { get; set; }
     public Guid UserId { get; set; }
     public EventJoinState State { get; set; }
+    public RsvpVisibility Visibility { get; set; } = RsvpVisibility.FriendsOnly;
     public DateTimeOffset CreatedUtc { get; set; }
     public DateTimeOffset UpdatedUtc { get; set; }
 }
@@ -405,6 +511,13 @@ public sealed class Circle
     public CircleType Type { get; set; } = CircleType.Platform;
     public CircleVisibility Visibility { get; set; } = CircleVisibility.Public;
     public CircleStatus Status { get; set; } = CircleStatus.Active;
+    public CirclePrivacyType PrivacyType { get; set; } = CirclePrivacyType.Open;
+    public bool AllowPseudonyms { get; set; } = true;
+    public bool AllowHiddenProfiles { get; set; } = true;
+    public bool AllowAnonymousPosts { get; set; }
+    public MemberListVisibility MemberListVisibility { get; set; } = MemberListVisibility.MembersOnly;
+    public CirclePostVisibility DefaultPostVisibility { get; set; } = CirclePostVisibility.MembersOnly;
+    public RsvpVisibility DefaultEventRsvpVisibility { get; set; } = RsvpVisibility.FriendsOnly;
     public WithinLens Lens { get; set; } = WithinLens.Feel;
     public DateTimeOffset CreatedAt { get; set; }
 }
@@ -415,7 +528,10 @@ public sealed class CircleMember
     public Guid CircleId { get; set; }
     public Guid UserId { get; set; }
     public CircleMemberStatus Status { get; set; } = CircleMemberStatus.Active;
+    public CircleIdentityMode IdentityMode { get; set; } = CircleIdentityMode.RealProfile;
+    public string? DisplayNameOverride { get; set; }
     public DateTimeOffset JoinedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
     public DateTimeOffset? LeftAt { get; set; }
 }
 
@@ -500,6 +616,69 @@ public sealed class CircleGuideline
     public string Body { get; set; } = "";
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
+}
+
+public sealed class Connection
+{
+    public Guid Id { get; set; }
+    public Guid RequesterUserId { get; set; }
+    public Guid ReceiverUserId { get; set; }
+    public ConnectionStatus Status { get; set; } = ConnectionStatus.Pending;
+    public Guid? BlockedByUserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? RespondedAt { get; set; }
+    public DateTimeOffset? BlockedAt { get; set; }
+}
+
+public sealed class UserPrivacySettings
+{
+    public Guid UserId { get; set; }
+    public ProfileVisibility ProfileVisibility { get; set; } = ProfileVisibility.FriendsOnly;
+    public RsvpVisibility DefaultRsvpVisibility { get; set; } = RsvpVisibility.FriendsOnly;
+    public TaggingPermission TaggingPermission { get; set; } = TaggingPermission.FriendsOnly;
+    public FriendRequestPermission FriendRequestPermission { get; set; } = FriendRequestPermission.SameCircleOrEvent;
+    public bool ShowActivityToFriends { get; set; } = true;
+    public bool AllowEventInviteFromFriends { get; set; } = true;
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public sealed class EventInvite
+{
+    public Guid Id { get; set; }
+    public Guid EventId { get; set; }
+    public Guid InvitedByUserId { get; set; }
+    public Guid InvitedUserId { get; set; }
+    public EventInviteStatus Status { get; set; } = EventInviteStatus.Pending;
+    public string? Message { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? RespondedAt { get; set; }
+}
+
+public sealed class Mention
+{
+    public Guid Id { get; set; }
+    public Guid MentionedUserId { get; set; }
+    public Guid MentionedByUserId { get; set; }
+    public MentionSourceType SourceType { get; set; }
+    public Guid SourceId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class UserReport
+{
+    public Guid Id { get; set; }
+    public Guid ReportedByUserId { get; set; }
+    public Guid ReportedUserId { get; set; }
+    public MentionSourceType? SourceType { get; set; }
+    public Guid? SourceId { get; set; }
+    public UserReportReason Reason { get; set; }
+    public string? Details { get; set; }
+    public UserReportStatus Status { get; set; } = UserReportStatus.Open;
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 
 public sealed class Review
