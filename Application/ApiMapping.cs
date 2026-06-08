@@ -40,7 +40,7 @@ public static class ApiMapping
         provider.InstagramUrl,
         provider.IsVerified);
 
-    public static ProviderApplicationDto ToDto(this ProviderApplication application) => new(
+    public static ProviderApplicationDto ToDto(this ProviderApplication application, string? temporaryPassword = null) => new(
         application.Id,
         application.Status,
         application.ProviderCategory,
@@ -80,7 +80,8 @@ public static class ApiMapping
         application.SubmittedUtc,
         application.UpdatedUtc,
         application.ReviewedUtc,
-        application.ApprovedProviderId);
+        application.ApprovedProviderId,
+        temporaryPassword);
 
     public static Event ToEntity(this UpsertEventDto request, Guid providerId)
     {

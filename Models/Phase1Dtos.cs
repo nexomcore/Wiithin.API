@@ -70,7 +70,8 @@ public sealed record ProviderApplicationDto(
     DateTimeOffset SubmittedUtc,
     DateTimeOffset UpdatedUtc,
     DateTimeOffset? ReviewedUtc,
-    Guid? ApprovedProviderId);
+    Guid? ApprovedProviderId,
+    string? TemporaryPassword = null);
 
 public sealed record CreateProviderApplicationDto(
     ProviderCategory ProviderCategory,
@@ -202,6 +203,186 @@ public sealed record PostDto(
 public sealed record CommentDto(Guid Id, Guid? ParentCommentId, string AuthorName, string Body, DateTimeOffset CreatedUtc);
 
 public sealed record UpsertCommentDto(string Body, Guid? ParentCommentId = null);
+
+public sealed record CommunityAuthorDto(
+    Guid Id,
+    string DisplayName,
+    WithinRole Role,
+    bool IsVerifiedProvider);
+
+public sealed record CommunityTopicDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string? Description,
+    bool IsActive);
+
+public sealed record CommunityEventSummaryDto(
+    Guid Id,
+    string Title,
+    string ProviderName,
+    DateTimeOffset StartUtc,
+    string LocationName);
+
+public sealed record CommunityPostDto(
+    Guid Id,
+    CommunityPostType PostType,
+    string Title,
+    string Body,
+    CommunityContentStatus Status,
+    CommunityAuthorDto Author,
+    CommunityTopicDto[] Topics,
+    CommunityEventSummaryDto? LinkedEvent,
+    int HelpfulCount,
+    int CommentCount,
+    int SavedCount,
+    bool IsHelpful,
+    bool IsSaved,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record CommunityPostDetailDto(
+    CommunityPostDto Post,
+    CommunityCommentDto[] Comments);
+
+public sealed record CommunityCommentDto(
+    Guid Id,
+    Guid PostId,
+    string Body,
+    CommunityContentStatus Status,
+    CommunityAuthorDto Author,
+    int HelpfulCount,
+    bool IsHelpful,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record CommunityCreatePostDto(
+    CommunityPostType PostType,
+    string Title,
+    string Body,
+    Guid[] TopicIds,
+    Guid? LinkedEventId);
+
+public sealed record CommunityUpdatePostDto(
+    CommunityPostType PostType,
+    string Title,
+    string Body,
+    Guid[] TopicIds,
+    Guid? LinkedEventId);
+
+public sealed record CommunityCreateCommentDto(string Body);
+
+public sealed record CommunityReportRequestDto(
+    Guid? PostId,
+    Guid? CommentId,
+    CommunityReportReason Reason,
+    string? Description);
+
+public sealed record CommunityReportDto(
+    Guid Id,
+    CommunityReportReason Reason,
+    string? Description,
+    CommunityReportStatus Status,
+    CommunityPostDto? Post,
+    CommunityCommentDto? Comment,
+    CommunityAuthorDto Reporter,
+    CommunityAuthorDto? Reviewer,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ReviewedAt);
+
+public sealed record CommunityReviewReportDto(CommunityReportStatus Status);
+
+public sealed record CircleDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string Description,
+    CircleType Type,
+    CircleVisibility Visibility,
+    CircleStatus Status,
+    WithinLens Lens,
+    int MemberCount,
+    int ThreadCount,
+    int EventCount,
+    bool IsMember);
+
+public sealed record CircleGuidelineDto(Guid Id, string Title, string Body, int SortOrder);
+
+public sealed record CircleDetailDto(
+    CircleDto Circle,
+    CircleGuidelineDto[] Guidelines,
+    CircleThreadDto[] LatestThreads,
+    EventDto[] SharedEvents);
+
+public sealed record CircleThreadDto(
+    Guid Id,
+    Guid CircleId,
+    string CircleName,
+    CommunityPostType ThreadType,
+    string Title,
+    string Body,
+    CommunityContentStatus Status,
+    CommunityAuthorDto Author,
+    CommunityEventSummaryDto? LinkedEvent,
+    int HelpfulCount,
+    int CommentCount,
+    bool IsHelpful,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record CircleThreadDetailDto(CircleThreadDto Thread, CircleThreadCommentDto[] Comments);
+
+public sealed record CircleThreadCommentDto(
+    Guid Id,
+    Guid ThreadId,
+    string Body,
+    CommunityContentStatus Status,
+    CommunityAuthorDto Author,
+    int HelpfulCount,
+    bool IsHelpful,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record CircleCreateThreadDto(
+    CommunityPostType ThreadType,
+    string Title,
+    string Body,
+    Guid? LinkedEventId);
+
+public sealed record CircleUpdateThreadDto(
+    CommunityPostType ThreadType,
+    string Title,
+    string Body,
+    Guid? LinkedEventId);
+
+public sealed record CircleCreateCommentDto(string Body);
+
+public sealed record CircleShareEventDto(Guid EventId, string? OptionalNote);
+
+public sealed record CircleReportRequestDto(
+    Guid? ThreadId,
+    Guid? CommentId,
+    Guid? CircleEventId,
+    CommunityReportReason Reason,
+    string? Description);
+
+public sealed record CircleReportDto(
+    Guid Id,
+    Guid CircleId,
+    Guid? CircleEventId,
+    string CircleName,
+    CommunityReportReason Reason,
+    string? Description,
+    CommunityReportStatus Status,
+    CircleThreadDto? Thread,
+    CircleThreadCommentDto? Comment,
+    EventDto? SharedEvent,
+    CommunityAuthorDto Reporter,
+    CommunityAuthorDto? Reviewer,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ReviewedAt);
+
+public sealed record CircleReviewReportDto(CommunityReportStatus Status);
 
 public sealed record ReviewDto(Guid Id, string AuthorName, int Rating, string Body, DateTimeOffset CreatedUtc);
 

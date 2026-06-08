@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 using WithinAPI.Application;
 using WithinAPI.Data;
 using WithinAPI.Domain;
 using WithinAPI.Models;
+using WithinAPI.Services;
 
 namespace WithinAPI.Endpoints;
 
@@ -108,6 +110,52 @@ public static class ProviderApplicationEndpoints
                 return Results.BadRequest(new { message = "A reason is required for rejected or more-info decisions." });
             }
 
+            string? temporaryPassword = null;
+            if (request.Status == ProviderApplicationStatus.Approved && application.ApprovedProviderId is null)
+            {
+                temporaryPassword = GenerateTemporaryPassword();
+                var email = application.ContactEmail.Trim().ToLowerInvariant();
+                var user = await db.Users.FirstOrDefaultAsync(item => item.Email == email);
+                if (user is null)
+                {
+                    user = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        DisplayName = application.ContactName,
+                        Email = email,
+                        PasswordHash = Passwords.Hash(temporaryPassword),
+                        Role = WithinRole.Provider,
+                        PreferredLens = application.PrimaryLens,
+                        CreatedUtc = DateTimeOffset.UtcNow
+                    };
+                    db.Users.Add(user);
+                }
+                else
+                {
+                    user.DisplayName = string.IsNullOrWhiteSpace(user.DisplayName) ? application.ContactName : user.DisplayName;
+                    user.PasswordHash = Passwords.Hash(temporaryPassword);
+                    user.Role = WithinRole.Provider;
+                    user.PreferredLens = application.PrimaryLens;
+                }
+
+                var provider = new Provider
+                {
+                    Id = Guid.NewGuid(),
+                    OwnerUserId = user.Id,
+                    Name = application.ProviderName,
+                    Slug = await CreateUniqueProviderSlug(db, application.ProviderName),
+                    Bio = application.Bio,
+                    Lens = application.PrimaryLens,
+                    Location = application.Location,
+                    WebsiteUrl = application.WebsiteUrl,
+                    InstagramUrl = application.InstagramUrl,
+                    IsVerified = true,
+                    CreatedUtc = DateTimeOffset.UtcNow
+                };
+                db.Providers.Add(provider);
+                application.ApprovedProviderId = provider.Id;
+            }
+
             application.Status = request.Status;
             application.ReviewDecisionReason = reason;
             application.UpdatedUtc = DateTimeOffset.UtcNow;
@@ -116,7 +164,7 @@ public static class ProviderApplicationEndpoints
                 : null;
 
             await db.SaveChangesAsync();
-            return Results.Ok(application.ToDto());
+            return Results.Ok(application.ToDto(temporaryPassword));
         });
 
         admin.MapPost("/{id:guid}/notes", async (Guid id, ProviderApplicationNotesDto request, WithinDbContext db) =>
@@ -173,5 +221,35 @@ public static class ProviderApplicationEndpoints
     {
         var clean = value?.Trim();
         return string.IsNullOrWhiteSpace(clean) ? null : clean;
+    }
+
+    private static string GenerateTemporaryPassword()
+    {
+        const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+        return RandomNumberGenerator.GetString(alphabet, 12);
+    }
+
+    private static async Task<string> CreateUniqueProviderSlug(WithinDbContext db, string providerName)
+    {
+        var baseSlug = CreateSlug(providerName);
+        var slug = baseSlug;
+        var suffix = 2;
+        while (await db.Providers.AnyAsync(item => item.Slug == slug))
+        {
+            slug = $"{baseSlug}-{suffix++}";
+        }
+
+        return slug;
+    }
+
+    private static string CreateSlug(string value)
+    {
+        var chars = value
+            .Trim()
+            .ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '-')
+            .ToArray();
+        var slug = string.Join('-', new string(chars).Split('-', StringSplitOptions.RemoveEmptyEntries));
+        return slug.Length == 0 ? $"provider-{Guid.NewGuid():N}"[..22] : slug;
     }
 }

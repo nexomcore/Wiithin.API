@@ -27,7 +27,7 @@ public static class HomeEndpoints
                     userId)
                 .Take(5)
                 .ToArrayAsync();
-            var communities = await ApiMapping.ProjectCommunities(db.Communities, db, userId).Take(3).ToArrayAsync();
+            var communities = Array.Empty<CommunityDto>();
             var upcoming = await ApiMapping.ProjectEvents(
                     from evt in db.Events
                     join reg in db.EventRegistrations on evt.Id equals reg.EventId

@@ -18,6 +18,22 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Reaction> Reactions => Set<Reaction>();
+    public DbSet<CommunityPost> CommunityPosts => Set<CommunityPost>();
+    public DbSet<CommunityTopic> CommunityTopics => Set<CommunityTopic>();
+    public DbSet<CommunityPostTopic> CommunityPostTopics => Set<CommunityPostTopic>();
+    public DbSet<CommunityComment> CommunityComments => Set<CommunityComment>();
+    public DbSet<CommunityHelpfulReaction> CommunityHelpfulReactions => Set<CommunityHelpfulReaction>();
+    public DbSet<SavedCommunityPost> SavedCommunityPosts => Set<SavedCommunityPost>();
+    public DbSet<CommunityReport> CommunityReports => Set<CommunityReport>();
+    public DbSet<Circle> Circles => Set<Circle>();
+    public DbSet<CircleMember> CircleMembers => Set<CircleMember>();
+    public DbSet<CircleRole> CircleRoles => Set<CircleRole>();
+    public DbSet<CircleThread> CircleThreads => Set<CircleThread>();
+    public DbSet<CircleThreadComment> CircleThreadComments => Set<CircleThreadComment>();
+    public DbSet<CircleEvent> CircleEvents => Set<CircleEvent>();
+    public DbSet<CircleHelpfulReaction> CircleHelpfulReactions => Set<CircleHelpfulReaction>();
+    public DbSet<CircleReport> CircleReports => Set<CircleReport>();
+    public DbSet<CircleGuideline> CircleGuidelines => Set<CircleGuideline>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
@@ -39,6 +55,16 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.HasPostgresEnum<NotificationKind>();
         modelBuilder.HasPostgresEnum<ProviderApplicationStatus>();
         modelBuilder.HasPostgresEnum<ProviderCategory>();
+        modelBuilder.HasPostgresEnum<CommunityPostType>();
+        modelBuilder.HasPostgresEnum<CommunityContentStatus>();
+        modelBuilder.HasPostgresEnum<CommunityReportReason>();
+        modelBuilder.HasPostgresEnum<CommunityReportStatus>();
+        modelBuilder.HasPostgresEnum<CircleType>();
+        modelBuilder.HasPostgresEnum<CircleVisibility>();
+        modelBuilder.HasPostgresEnum<CircleStatus>();
+        modelBuilder.HasPostgresEnum<CircleMemberStatus>();
+        modelBuilder.HasPostgresEnum<CircleRoleKind>();
+        modelBuilder.HasPostgresEnum<CircleEventStatus>();
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -87,6 +113,130 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.Entity<Comment>(entity =>
         {
             entity.HasIndex(item => item.ParentCommentId);
+        });
+
+        modelBuilder.Entity<CommunityPost>(entity =>
+        {
+            entity.HasIndex(item => new { item.Status, item.CreatedAt });
+            entity.HasIndex(item => item.LinkedEventId);
+            entity.HasIndex(item => item.UserId);
+            entity.Property(item => item.Title).HasMaxLength(120);
+            entity.Property(item => item.Body).HasMaxLength(3000);
+        });
+
+        modelBuilder.Entity<CommunityTopic>(entity =>
+        {
+            entity.HasIndex(item => item.Slug).IsUnique();
+            entity.Property(item => item.Name).HasMaxLength(80);
+            entity.Property(item => item.Slug).HasMaxLength(80);
+            entity.Property(item => item.Description).HasMaxLength(240);
+        });
+
+        modelBuilder.Entity<CommunityPostTopic>(entity =>
+        {
+            entity.HasKey(item => new { item.PostId, item.TopicId });
+            entity.HasIndex(item => item.TopicId);
+        });
+
+        modelBuilder.Entity<CommunityComment>(entity =>
+        {
+            entity.HasIndex(item => new { item.PostId, item.CreatedAt });
+            entity.HasIndex(item => item.UserId);
+            entity.Property(item => item.Body).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<CommunityHelpfulReaction>(entity =>
+        {
+            entity.HasIndex(item => new { item.PostId, item.UserId })
+                .IsUnique()
+                .HasFilter("\"PostId\" IS NOT NULL");
+            entity.HasIndex(item => new { item.CommentId, item.UserId })
+                .IsUnique()
+                .HasFilter("\"CommentId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<SavedCommunityPost>(entity =>
+        {
+            entity.HasIndex(item => new { item.PostId, item.UserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<CommunityReport>(entity =>
+        {
+            entity.HasIndex(item => new { item.Status, item.CreatedAt });
+            entity.HasIndex(item => item.PostId);
+            entity.HasIndex(item => item.CommentId);
+            entity.Property(item => item.Description).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<Circle>(entity =>
+        {
+            entity.HasIndex(item => item.Slug).IsUnique();
+            entity.HasIndex(item => new { item.Visibility, item.Status });
+            entity.Property(item => item.Name).HasMaxLength(120);
+            entity.Property(item => item.Slug).HasMaxLength(120);
+            entity.Property(item => item.Description).HasMaxLength(600);
+        });
+
+        modelBuilder.Entity<CircleMember>(entity =>
+        {
+            entity.HasIndex(item => new { item.CircleId, item.UserId }).IsUnique();
+            entity.HasIndex(item => new { item.UserId, item.Status });
+        });
+
+        modelBuilder.Entity<CircleRole>(entity =>
+        {
+            entity.HasIndex(item => new { item.CircleId, item.UserId, item.Role }).IsUnique();
+            entity.HasIndex(item => item.UserId);
+        });
+
+        modelBuilder.Entity<CircleThread>(entity =>
+        {
+            entity.HasIndex(item => new { item.CircleId, item.Status, item.CreatedAt });
+            entity.HasIndex(item => item.LinkedEventId);
+            entity.HasIndex(item => item.UserId);
+            entity.Property(item => item.Title).HasMaxLength(140);
+            entity.Property(item => item.Body).HasMaxLength(4000);
+        });
+
+        modelBuilder.Entity<CircleThreadComment>(entity =>
+        {
+            entity.HasIndex(item => new { item.ThreadId, item.CreatedAt });
+            entity.HasIndex(item => item.UserId);
+            entity.Property(item => item.Body).HasMaxLength(1200);
+        });
+
+        modelBuilder.Entity<CircleEvent>(entity =>
+        {
+            entity.HasIndex(item => new { item.CircleId, item.EventId }).IsUnique();
+            entity.HasIndex(item => item.EventId);
+            entity.Property(item => item.OptionalNote).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<CircleHelpfulReaction>(entity =>
+        {
+            entity.HasIndex(item => new { item.ThreadId, item.UserId })
+                .IsUnique()
+                .HasFilter("\"ThreadId\" IS NOT NULL");
+            entity.HasIndex(item => new { item.CommentId, item.UserId })
+                .IsUnique()
+                .HasFilter("\"CommentId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<CircleReport>(entity =>
+        {
+            entity.HasIndex(item => new { item.Status, item.CreatedAt });
+            entity.HasIndex(item => item.CircleId);
+            entity.HasIndex(item => item.ThreadId);
+            entity.HasIndex(item => item.CommentId);
+            entity.HasIndex(item => item.CircleEventId);
+            entity.Property(item => item.Description).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<CircleGuideline>(entity =>
+        {
+            entity.HasIndex(item => new { item.CircleId, item.SortOrder });
+            entity.Property(item => item.Title).HasMaxLength(120);
+            entity.Property(item => item.Body).HasMaxLength(1000);
         });
 
         modelBuilder.Entity<DailyCheckIn>(entity =>

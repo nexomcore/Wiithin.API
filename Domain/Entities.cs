@@ -64,6 +64,81 @@ public enum ProviderCategory
     CorporateWorkplaceWellness
 }
 
+public enum CommunityPostType
+{
+    AskCommunity,
+    ShareExperience,
+    FindBuddy,
+    LocalRecommendation,
+    Reflection
+}
+
+public enum CommunityContentStatus
+{
+    Active,
+    Hidden,
+    Removed,
+    UnderReview
+}
+
+public enum CommunityReportReason
+{
+    SpamOrPromotion,
+    HarassmentOrAbuse,
+    MedicalMisinformation,
+    InappropriateContent,
+    SafetyConcern,
+    Other
+}
+
+public enum CommunityReportStatus
+{
+    Pending,
+    Reviewed,
+    ActionTaken,
+    Dismissed
+}
+
+public enum CircleType
+{
+    Platform,
+    Provider,
+    EventCohort,
+    PrivateSupport
+}
+
+public enum CircleVisibility
+{
+    Public,
+    Private,
+    Hidden
+}
+
+public enum CircleStatus
+{
+    Active,
+    Archived
+}
+
+public enum CircleMemberStatus
+{
+    Active,
+    Left,
+    Removed
+}
+
+public enum CircleRoleKind
+{
+    Moderator,
+    Admin
+}
+
+public enum CircleEventStatus
+{
+    Active,
+    Removed
+}
+
 public sealed class User
 {
     public Guid Id { get; set; }
@@ -244,6 +319,187 @@ public sealed class Reaction
     public Guid UserId { get; set; }
     public string Kind { get; set; } = "like";
     public DateTimeOffset CreatedUtc { get; set; }
+}
+
+public sealed class CommunityPost
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public CommunityPostType PostType { get; set; }
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    public Guid? LinkedEventId { get; set; }
+    public CommunityContentStatus Status { get; set; } = CommunityContentStatus.Active;
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+    public bool IsDeleted { get; set; }
+}
+
+public sealed class CommunityTopic
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Slug { get; set; } = "";
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CommunityPostTopic
+{
+    public Guid PostId { get; set; }
+    public Guid TopicId { get; set; }
+}
+
+public sealed class CommunityComment
+{
+    public Guid Id { get; set; }
+    public Guid PostId { get; set; }
+    public Guid UserId { get; set; }
+    public string Body { get; set; } = "";
+    public CommunityContentStatus Status { get; set; } = CommunityContentStatus.Active;
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+    public bool IsDeleted { get; set; }
+}
+
+public sealed class CommunityHelpfulReaction
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid? PostId { get; set; }
+    public Guid? CommentId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class SavedCommunityPost
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid PostId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CommunityReport
+{
+    public Guid Id { get; set; }
+    public Guid ReportedByUserId { get; set; }
+    public Guid? PostId { get; set; }
+    public Guid? CommentId { get; set; }
+    public CommunityReportReason Reason { get; set; }
+    public string? Description { get; set; }
+    public CommunityReportStatus Status { get; set; } = CommunityReportStatus.Pending;
+    public Guid? ReviewedByUserId { get; set; }
+    public DateTimeOffset? ReviewedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class Circle
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Slug { get; set; } = "";
+    public string Description { get; set; } = "";
+    public CircleType Type { get; set; } = CircleType.Platform;
+    public CircleVisibility Visibility { get; set; } = CircleVisibility.Public;
+    public CircleStatus Status { get; set; } = CircleStatus.Active;
+    public WithinLens Lens { get; set; } = WithinLens.Feel;
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CircleMember
+{
+    public Guid Id { get; set; }
+    public Guid CircleId { get; set; }
+    public Guid UserId { get; set; }
+    public CircleMemberStatus Status { get; set; } = CircleMemberStatus.Active;
+    public DateTimeOffset JoinedAt { get; set; }
+    public DateTimeOffset? LeftAt { get; set; }
+}
+
+public sealed class CircleRole
+{
+    public Guid Id { get; set; }
+    public Guid CircleId { get; set; }
+    public Guid UserId { get; set; }
+    public CircleRoleKind Role { get; set; }
+    public Guid? AssignedByUserId { get; set; }
+    public DateTimeOffset AssignedAt { get; set; }
+}
+
+public sealed class CircleThread
+{
+    public Guid Id { get; set; }
+    public Guid CircleId { get; set; }
+    public Guid UserId { get; set; }
+    public CommunityPostType ThreadType { get; set; } = CommunityPostType.AskCommunity;
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    public Guid? LinkedEventId { get; set; }
+    public CommunityContentStatus Status { get; set; } = CommunityContentStatus.Active;
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+}
+
+public sealed class CircleThreadComment
+{
+    public Guid Id { get; set; }
+    public Guid ThreadId { get; set; }
+    public Guid UserId { get; set; }
+    public string Body { get; set; } = "";
+    public CommunityContentStatus Status { get; set; } = CommunityContentStatus.Active;
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+}
+
+public sealed class CircleEvent
+{
+    public Guid Id { get; set; }
+    public Guid CircleId { get; set; }
+    public Guid EventId { get; set; }
+    public Guid SharedByUserId { get; set; }
+    public string? OptionalNote { get; set; }
+    public CircleEventStatus Status { get; set; } = CircleEventStatus.Active;
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CircleHelpfulReaction
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid? ThreadId { get; set; }
+    public Guid? CommentId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CircleReport
+{
+    public Guid Id { get; set; }
+    public Guid ReporterUserId { get; set; }
+    public Guid CircleId { get; set; }
+    public Guid? ThreadId { get; set; }
+    public Guid? CommentId { get; set; }
+    public Guid? CircleEventId { get; set; }
+    public CommunityReportReason Reason { get; set; }
+    public string? Description { get; set; }
+    public CommunityReportStatus Status { get; set; } = CommunityReportStatus.Pending;
+    public Guid? ReviewedByUserId { get; set; }
+    public DateTimeOffset? ReviewedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class CircleGuideline
+{
+    public Guid Id { get; set; }
+    public Guid CircleId { get; set; }
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    public int SortOrder { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public sealed class Review

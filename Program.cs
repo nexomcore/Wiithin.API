@@ -98,7 +98,9 @@ var app = builder.Build();
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<WithinDbContext>();
-    await db.Database.MigrateAsync();
+        await db.Database.MigrateAsync();
+        await CommunityTopicSeedData.EnsureSeededAsync(db);
+        await CircleSeedData.EnsureSeededAsync(db);
 }
 
 app.UseSwagger();
