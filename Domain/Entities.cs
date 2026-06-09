@@ -779,6 +779,8 @@ public sealed class CircleThreadComment
 {
     public Guid Id { get; set; }
     public Guid ThreadId { get; set; }
+    // One-level replies only: a reply points at a top-level comment; replies cannot be replied to.
+    public Guid? ParentCommentId { get; set; }
     public Guid UserId { get; set; }
     public string Body { get; set; } = "";
     public bool IsAnonymous { get; set; }

@@ -325,6 +325,7 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         {
             entity.HasIndex(item => new { item.ThreadId, item.CreatedAt });
             entity.HasIndex(item => item.UserId);
+            entity.HasIndex(item => item.ParentCommentId);
             entity.Property(item => item.IsAnonymous).HasDefaultValue(false);
             entity.Property(item => item.Body).HasMaxLength(1200);
         });

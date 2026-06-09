@@ -138,6 +138,25 @@ public sealed class NotificationService(WithinDbContext db)
             RelatedUserId: actorUserId));
     }
 
+    public async Task NotifyCircleCommentReply(Guid threadId, Guid parentCommentId, Guid replyCommentId, Guid actorUserId)
+    {
+        var parent = await db.CircleThreadComments.FindAsync(parentCommentId);
+        if (parent is null || parent.UserId == actorUserId) return;
+        var thread = await db.CircleThreads.FindAsync(threadId);
+        if (thread is null) return;
+        var actorName = await CircleDisplayName(thread.CircleId, actorUserId);
+        await CreateAsync(new NotificationCreateRequest(
+            parent.UserId,
+            NotificationKind.CommentReply,
+            "New comment reply",
+            $"{actorName} replied to your comment.",
+            NotificationTargetType.CircleThread,
+            threadId,
+            actorUserId,
+            CircleId: thread.CircleId,
+            RelatedUserId: actorUserId));
+    }
+
     public async Task NotifyCommentReply(Guid parentCommentId, Guid replyCommentId, Guid actorUserId, Guid eventId)
     {
         var parent = await db.Comments.FindAsync(parentCommentId);

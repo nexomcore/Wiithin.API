@@ -543,7 +543,10 @@ public sealed record CircleThreadCommentDto(
     // Tap the author via contextType=CircleComment, contextId=CircleId, targetContextProfileId=Id.
     Guid CircleId = default,
     CircleIdentityMode AuthorIdentityMode = CircleIdentityMode.RealProfile,
-    bool AuthorIsClickable = false);
+    bool AuthorIsClickable = false,
+    Guid? ParentCommentId = null,
+    // Populated for top-level comments only; replies are one level deep.
+    CircleThreadCommentDto[]? Replies = null);
 
 public sealed record CircleCreateThreadDto(
     CommunityPostType ThreadType,
@@ -564,7 +567,7 @@ public sealed record CircleUpdateThreadDto(
     bool IsPinned = false,
     string? ImageUrl = null);
 
-public sealed record CircleCreateCommentDto(string Body, bool IsAnonymous = false);
+public sealed record CircleCreateCommentDto(string Body, bool IsAnonymous = false, Guid? ParentCommentId = null);
 
 public sealed record CircleShareEventDto(Guid EventId, string? OptionalNote);
 

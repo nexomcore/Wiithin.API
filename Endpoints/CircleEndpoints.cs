@@ -272,14 +272,21 @@ public static class CircleEndpoints
             return Results.Ok(new CircleIdentityDto(circleId, member.IdentityMode, member.DisplayNameOverride, identity.DisplayName, identity.ProfileLinkAllowed));
         }).RequireAuthorization();
 
-        circles.MapGet("/{circleId:guid}/members", async (Guid circleId, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal) =>
+        circles.MapGet("/{circleId:guid}/members", async (Guid circleId, WithinDbContext db, PrivacyService privacy, ClaimsPrincipal principal, int? limit, int? offset) =>
         {
             var viewerUserId = principal.UserId();
             if (!await db.Circles.AnyAsync(item => item.Id == circleId)) return Results.NotFound();
             if (!await privacy.CanViewCircleMember(viewerUserId, circleId, viewerUserId)) return Results.Forbid();
+            // Page the roster so a large circle never returns (or renders) thousands of rows at once.
+            // Admins and moderators surface first; the rest follow by join date.
+            var take = Math.Clamp(limit ?? 30, 1, 100);
+            var skip = Math.Max(offset ?? 0, 0);
             var members = await db.CircleMembers
                 .Where(item => item.CircleId == circleId && item.Status == CircleMemberStatus.Active)
-                .OrderBy(item => item.JoinedAt)
+                .OrderBy(item => item.Role == CircleMemberRole.Admin ? 0 : item.Role == CircleMemberRole.Moderator ? 1 : 2)
+                .ThenBy(item => item.JoinedAt)
+                .Skip(skip)
+                .Take(take)
                 .ToArrayAsync();
             var response = new List<CircleMemberDto>(members.Length);
             foreach (var member in members)
@@ -542,11 +549,28 @@ public static class CircleEndpoints
                 return Results.BadRequest(new { message = "Comment body is required and must be 1200 characters or less." });
             }
 
+            // Replies are one level deep: you may reply to a top-level comment, but not to a reply.
+            Guid? parentCommentId = null;
+            if (request.ParentCommentId is Guid parentId)
+            {
+                var parent = await db.CircleThreadComments.FindAsync(parentId);
+                if (parent is null || parent.ThreadId != threadId || parent.Status == CommunityContentStatus.Hidden)
+                {
+                    return Results.BadRequest(new { message = "The comment you are replying to is not available." });
+                }
+                if (parent.ParentCommentId is not null)
+                {
+                    return Results.BadRequest(new { message = "Replies can only be one level deep. Reply to the original comment instead." });
+                }
+                parentCommentId = parentId;
+            }
+
             var now = DateTimeOffset.UtcNow;
             var comment = new CircleThreadComment
             {
                 Id = Guid.NewGuid(),
                 ThreadId = threadId,
+                ParentCommentId = parentCommentId,
                 UserId = userId,
                 Body = request.Body.Trim(),
                 IsAnonymous = request.IsAnonymous,
@@ -556,7 +580,14 @@ public static class CircleEndpoints
             };
             db.CircleThreadComments.Add(comment);
             await db.SaveChangesAsync();
-            await notifications.NotifyCircleThreadReply(threadId, comment.Id, userId);
+            if (parentCommentId is Guid replyParentId)
+            {
+                await notifications.NotifyCircleCommentReply(threadId, replyParentId, comment.Id, userId);
+            }
+            else
+            {
+                await notifications.NotifyCircleThreadReply(threadId, comment.Id, userId);
+            }
             await notifications.NotifyMentions(userId, comment.Body, MentionSourceType.CircleComment, comment.Id, thread.CircleId, thread.LinkedEventId);
             return Results.Created($"/api/circles/comments/{comment.Id}", await ToCommentDto(db, comment, userId));
         }).RequireAuthorization();
@@ -1432,15 +1463,27 @@ public static class CircleEndpoints
 
     private static async Task<CircleThreadCommentDto[]> ToCommentDtos(WithinDbContext db, CircleThreadComment[] comments, Guid? currentUserId)
     {
-        var response = new List<CircleThreadCommentDto>(comments.Length);
-        foreach (var comment in comments)
+        // One-level threading: top-level comments carry their replies nested under them.
+        var repliesByParent = comments
+            .Where(item => item.ParentCommentId is not null)
+            .GroupBy(item => item.ParentCommentId!.Value)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.CreatedAt).ToArray());
+        var response = new List<CircleThreadCommentDto>();
+        foreach (var comment in comments.Where(item => item.ParentCommentId is null))
         {
-            response.Add(await ToCommentDto(db, comment, currentUserId));
+            CircleThreadCommentDto[]? replies = null;
+            if (repliesByParent.TryGetValue(comment.Id, out var children))
+            {
+                var replyDtos = new List<CircleThreadCommentDto>(children.Length);
+                foreach (var child in children) replyDtos.Add(await ToCommentDto(db, child, currentUserId));
+                replies = replyDtos.ToArray();
+            }
+            response.Add(await ToCommentDto(db, comment, currentUserId, replies));
         }
         return response.ToArray();
     }
 
-    private static async Task<CircleThreadCommentDto> ToCommentDto(WithinDbContext db, CircleThreadComment comment, Guid? currentUserId)
+    private static async Task<CircleThreadCommentDto> ToCommentDto(WithinDbContext db, CircleThreadComment comment, Guid? currentUserId, CircleThreadCommentDto[]? replies = null)
     {
         var body = comment.Status == CommunityContentStatus.Removed ? "This comment has been removed." : comment.Body;
         var circleId = await db.CircleThreads.Where(item => item.Id == comment.ThreadId).Select(item => item.CircleId).FirstOrDefaultAsync();
@@ -1461,7 +1504,9 @@ public static class CircleEndpoints
             comment.UpdatedAt,
             circleId,
             identityMode,
-            AuthorIsClickable: true);
+            AuthorIsClickable: true,
+            ParentCommentId: comment.ParentCommentId,
+            Replies: replies);
     }
 
     private static async Task<CircleReportDto> ToReportDto(WithinDbContext db, CircleReport report, Guid? currentUserId)
