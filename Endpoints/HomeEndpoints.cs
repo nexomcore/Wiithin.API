@@ -19,6 +19,10 @@ public static class HomeEndpoints
             var userId = principal.UserId();
             var user = await db.Users.FindAsync(userId);
             if (user is null) return Results.Unauthorized();
+            var firstName = await db.UserWellbeingProfiles
+                .Where(item => item.UserId == userId)
+                .Select(item => item.FirstName)
+                .FirstOrDefaultAsync();
 
             var interests = await db.UserWellbeingInterests
                 .Where(item => item.UserId == userId)
@@ -61,6 +65,7 @@ public static class HomeEndpoints
 
             return Results.Ok(new HomeDashboardDto(
                 user.ToDto(),
+                string.IsNullOrWhiteSpace(firstName) ? null : firstName,
                 todayCheckInEntity?.ToDto(),
                 recommended,
                 communities,

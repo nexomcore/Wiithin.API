@@ -214,7 +214,119 @@ public static class HabitEndpoints
             return Results.NoContent();
         });
 
+        MapAdminHabitTemplateEndpoints(app);
         return app;
+    }
+
+    // Master data: habit templates are managed from the admin portal (no seed scripts).
+    private static void MapAdminHabitTemplateEndpoints(IEndpointRouteBuilder app)
+    {
+        var templates = app.MapGroup("/api/admin/habits/templates").RequireAuthorization("AdminOnly");
+
+        templates.MapGet("", async (WithinDbContext db) =>
+            Results.Ok(await db.HabitTemplates
+                .OrderBy(item => item.SortOrder)
+                .ThenBy(item => item.Name)
+                .Select(item => new AdminHabitTemplateDto(
+                    item.Id.ToString(), item.Name, item.Category.ToString(),
+                    item.Description, item.IconKey, item.SortOrder, item.IsActive))
+                .ToArrayAsync()));
+
+        templates.MapPost("", async (CreateHabitTemplateRequest request, WithinDbContext db) =>
+        {
+            var validation = ValidateTemplate(request.Name, request.Category, request.Description, request.IconKey,
+                out var name, out var category, out var description, out var iconKey);
+            if (validation is not null) return Results.BadRequest(new { message = validation });
+            if (await db.HabitTemplates.AnyAsync(item => item.Name == name))
+            {
+                return Results.Conflict(new { message = "A habit template with that name already exists." });
+            }
+
+            var template = new HabitTemplate
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Category = category,
+                Description = description,
+                IconKey = iconKey,
+                SortOrder = request.SortOrder ?? 0,
+                IsActive = true
+            };
+            db.HabitTemplates.Add(template);
+            await db.SaveChangesAsync();
+            return Results.Created($"/api/admin/habits/templates/{template.Id}", ToAdminTemplateDto(template));
+        });
+
+        templates.MapPut("/{templateId:guid}", async (Guid templateId, UpdateHabitTemplateRequest request, WithinDbContext db) =>
+        {
+            var template = await db.HabitTemplates.FindAsync(templateId);
+            if (template is null) return Results.NotFound();
+
+            var validation = ValidateTemplate(request.Name, request.Category, request.Description, request.IconKey,
+                out var name, out var category, out var description, out var iconKey);
+            if (validation is not null) return Results.BadRequest(new { message = validation });
+            if (await db.HabitTemplates.AnyAsync(item => item.Name == name && item.Id != templateId))
+            {
+                return Results.Conflict(new { message = "A habit template with that name already exists." });
+            }
+
+            template.Name = name;
+            template.Category = category;
+            template.Description = description;
+            template.IconKey = iconKey;
+            template.SortOrder = request.SortOrder;
+            template.IsActive = request.IsActive;
+            await db.SaveChangesAsync();
+            return Results.Ok(ToAdminTemplateDto(template));
+        });
+
+        templates.MapDelete("/{templateId:guid}", async (Guid templateId, WithinDbContext db) =>
+        {
+            var template = await db.HabitTemplates.FindAsync(templateId);
+            if (template is null) return Results.NotFound();
+            template.IsActive = false;
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+    }
+
+    private static AdminHabitTemplateDto ToAdminTemplateDto(HabitTemplate template) => new(
+        template.Id.ToString(),
+        template.Name,
+        template.Category.ToString(),
+        template.Description,
+        template.IconKey,
+        template.SortOrder,
+        template.IsActive);
+
+    private static string? ValidateTemplate(string? rawName, string? rawCategory, string? rawDescription, string? rawIconKey,
+        out string name, out HabitCategory category, out string? description, out string? iconKey)
+    {
+        name = rawName?.Trim() ?? "";
+        category = default;
+        description = null;
+        iconKey = null;
+
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 60)
+            return "Habit name is required and must be 60 characters or less.";
+        if (!Enum.TryParse(rawCategory, ignoreCase: true, out category))
+            return "Choose a valid category (Mind, Body, Lifestyle, Social, or Nature).";
+
+        var trimmedDescription = rawDescription?.Trim();
+        if (!string.IsNullOrWhiteSpace(trimmedDescription))
+        {
+            if (trimmedDescription.Length > 240) return "Description must be 240 characters or less.";
+            description = trimmedDescription;
+        }
+
+        var trimmedIcon = rawIconKey?.Trim();
+        if (!string.IsNullOrWhiteSpace(trimmedIcon))
+        {
+            if (trimmedIcon.Length > 48) return "Icon key must be 48 characters or less.";
+            iconKey = trimmedIcon;
+        }
+
+        return null;
     }
 
     private static async Task<HashSet<Guid>> CompletedHabitIds(WithinDbContext db, Guid userId, DateOnly date)

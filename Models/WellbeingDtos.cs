@@ -21,8 +21,10 @@ public sealed record WellbeingProfileDto
     public bool UsePseudonym { get; init; }
     public string? Pseudonym { get; init; }
     public string? DateOfBirth { get; init; }
+    public int? Age { get; init; }
     public string? AgeRange { get; init; }
     public string? Gender { get; init; }
+    public string? LocationCountry { get; init; }
     public string? LocationCity { get; init; }
     public string? LocationSuburb { get; init; }
     public string? ProfilePhotoUrl { get; init; }
@@ -67,8 +69,10 @@ public sealed record WellbeingOnboardingRequest
     public bool UsePseudonym { get; init; }
     public string? Pseudonym { get; init; }
     public string? DateOfBirth { get; init; }
+    public int? Age { get; init; }
     public string? AgeRange { get; init; }
     public string? Gender { get; init; }
+    public string? LocationCountry { get; init; }
     public string? LocationCity { get; init; }
     public string? LocationSuburb { get; init; }
     public string? ProfilePhotoUrl { get; init; }

@@ -472,6 +472,7 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
             entity.Property(item => item.Pseudonym).HasMaxLength(80);
             entity.Property(item => item.AgeRange).HasMaxLength(40);
             entity.Property(item => item.Gender).HasMaxLength(80);
+            entity.Property(item => item.LocationCountry).HasMaxLength(80);
             entity.Property(item => item.LocationCity).HasMaxLength(120);
             entity.Property(item => item.LocationSuburb).HasMaxLength(120);
             entity.Property(item => item.ProfilePhotoUrl).HasMaxLength(1000);

@@ -250,8 +250,8 @@ public static class EventEndpoints
         events.MapPost("/invites/{inviteId:guid}/decline", async (Guid inviteId, WithinDbContext db, ClaimsPrincipal principal) =>
             await UpdateInvite(db, principal.UserId(), inviteId, EventInviteStatus.Declined)).RequireAuthorization();
 
-        events.MapGet("/{id:guid}/comments", async (Guid id, WithinDbContext db) =>
-            Results.Ok(await ApiMapping.ProjectComments(db.Comments.Where(item => item.EventId == id && !item.IsHidden), db).ToArrayAsync()));
+        events.MapGet("/{id:guid}/comments", async (Guid id, WithinDbContext db, ClaimsPrincipal principal) =>
+            Results.Ok(await ApiMapping.ProjectComments(db.Comments.Where(item => item.EventId == id && !item.IsHidden), db, principal.TryUserId()).ToArrayAsync()));
 
         events.MapPost("/{id:guid}/comments", async (Guid id, UpsertCommentDto request, WithinDbContext db, NotificationService notifications, ClaimsPrincipal principal) =>
         {
@@ -283,9 +283,15 @@ public static class EventEndpoints
                 await notifications.NotifyCommentReply(request.ParentCommentId.Value, comment.Id, comment.AuthorUserId, id);
             }
             await notifications.NotifyMentions(comment.AuthorUserId, body, MentionSourceType.EventComment, comment.Id, null, id);
-            var dto = await ApiMapping.ProjectComments(db.Comments.Where(item => item.Id == comment.Id), db).FirstAsync();
+            var dto = await ApiMapping.ProjectComments(db.Comments.Where(item => item.Id == comment.Id), db, comment.AuthorUserId).FirstAsync();
             return Results.Created($"/api/events/{id}/comments/{comment.Id}", dto);
         }).RequireAuthorization();
+
+        events.MapPost("/{id:guid}/comments/{commentId:guid}/like", async (Guid id, Guid commentId, WithinDbContext db, ClaimsPrincipal principal) =>
+            await SetCommentLike(db, principal.UserId(), id, commentId)).RequireAuthorization();
+
+        events.MapDelete("/{id:guid}/comments/{commentId:guid}/like", async (Guid id, Guid commentId, WithinDbContext db, ClaimsPrincipal principal) =>
+            await RemoveCommentLike(db, principal.UserId(), id, commentId)).RequireAuthorization();
 
         events.MapPost("/{id:guid}/reviews", async (Guid id, UpsertReviewDto request, WithinDbContext db, ClaimsPrincipal principal) =>
         {
@@ -314,6 +320,36 @@ public static class EventEndpoints
         }
 
         return (await privacy.GetOrCreateSettings(userId)).DefaultRsvpVisibility;
+    }
+
+    private static async Task<IResult> SetCommentLike(WithinDbContext db, Guid userId, Guid eventId, Guid commentId)
+    {
+        if (!await db.Comments.AnyAsync(item => item.Id == commentId && item.EventId == eventId && !item.IsHidden))
+        {
+            return Results.NotFound();
+        }
+
+        var exists = await db.Reactions.AnyAsync(item => item.UserId == userId && item.CommentId == commentId && item.Kind == "like");
+        if (!exists)
+        {
+            db.Reactions.Add(new Reaction { Id = Guid.NewGuid(), UserId = userId, CommentId = commentId, Kind = "like", CreatedUtc = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> RemoveCommentLike(WithinDbContext db, Guid userId, Guid eventId, Guid commentId)
+    {
+        if (!await db.Comments.AnyAsync(item => item.Id == commentId && item.EventId == eventId && !item.IsHidden))
+        {
+            return Results.NotFound();
+        }
+
+        await db.Reactions
+            .Where(item => item.UserId == userId && item.CommentId == commentId && item.Kind == "like")
+            .ExecuteDeleteAsync();
+        return Results.NoContent();
     }
 
     private static async Task<bool> ProviderServiceBelongsToProvider(WithinDbContext db, Guid? serviceId, Guid providerId) =>

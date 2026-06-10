@@ -353,7 +353,14 @@ public sealed record PostDto(
     int CommentCount,
     DateTimeOffset CreatedUtc);
 
-public sealed record CommentDto(Guid Id, Guid? ParentCommentId, string AuthorName, string Body, DateTimeOffset CreatedUtc);
+public sealed record CommentDto(
+    Guid Id,
+    Guid? ParentCommentId,
+    string AuthorName,
+    string Body,
+    DateTimeOffset CreatedUtc,
+    int LikeCount = 0,
+    bool HasLiked = false);
 
 public sealed record UpsertCommentDto(string Body, Guid? ParentCommentId = null);
 
@@ -369,6 +376,10 @@ public sealed record CommunityTopicDto(
     string Slug,
     string? Description,
     bool IsActive);
+
+public sealed record CreateCommunityTopicRequest(string Name, string? Description = null);
+
+public sealed record UpdateCommunityTopicRequest(string Name, string? Description, bool IsActive);
 
 public sealed record CommunityEventSummaryDto(
     Guid Id,
@@ -482,6 +493,27 @@ public sealed record CircleUpdateDto(
     bool AllowAnonymousPosts = false);
 
 public sealed record CircleGuidelineDto(Guid Id, string Title, string Body, int SortOrder);
+
+public sealed record AdminCircleCreateDto(
+    string Name,
+    string Description,
+    WithinLens Lens,
+    CircleVisibility Visibility = CircleVisibility.Public,
+    string? Rules = null);
+
+public sealed record AdminCircleUpdateDto(
+    string Name,
+    string Description,
+    WithinLens Lens,
+    CircleVisibility Visibility,
+    CircleStatus Status,
+    string? Rules = null);
+
+public sealed record AdminCircleGuidelineDto(Guid Id, string Title, string Body, int SortOrder, bool IsActive);
+
+public sealed record CircleGuidelineRequest(string Title, string Body, int SortOrder);
+
+public sealed record CircleGuidelineUpdateRequest(string Title, string Body, int SortOrder, bool IsActive);
 
 public sealed record CircleAnnouncementDto(
     Guid Id,
@@ -807,6 +839,7 @@ public sealed record NotificationMuteDto(NotificationMuteTargetType TargetType, 
 
 public sealed record HomeDashboardDto(
     UserSummaryDto User,
+    string? FirstName,
     DailyCheckInDto? TodayCheckIn,
     EventDto[] RecommendedEvents,
     CommunityDto[] CommunityPulse,

@@ -4,6 +4,7 @@ using WithinAPI.Application;
 using WithinAPI.Data;
 using WithinAPI.Domain;
 using WithinAPI.Models;
+using WithinAPI.Services;
 
 namespace WithinAPI.Endpoints;
 
@@ -319,6 +320,86 @@ public static class CommunityEndpoints
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
+
+        // Master data: community topics are managed from the admin portal (no seed scripts).
+        admin.MapGet("/topics", async (WithinDbContext db) =>
+            Results.Ok(await db.CommunityTopics
+                .OrderBy(item => item.Name)
+                .Select(item => new CommunityTopicDto(item.Id, item.Name, item.Slug, item.Description, item.IsActive))
+                .ToArrayAsync()));
+
+        admin.MapPost("/topics", async (CreateCommunityTopicRequest request, WithinDbContext db) =>
+        {
+            var name = request.Name?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(name) || name.Length > 80)
+            {
+                return Results.BadRequest(new { message = "Topic name is required and must be 80 characters or less." });
+            }
+
+            var topic = new CommunityTopic
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Slug = await UniqueTopicSlug(db, name),
+                Description = NormalizeTopicDescription(request.Description),
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.CommunityTopics.Add(topic);
+            await db.SaveChangesAsync();
+            return Results.Created($"/api/admin/community/topics/{topic.Id}",
+                new CommunityTopicDto(topic.Id, topic.Name, topic.Slug, topic.Description, topic.IsActive));
+        });
+
+        admin.MapPut("/topics/{topicId:guid}", async (Guid topicId, UpdateCommunityTopicRequest request, WithinDbContext db) =>
+        {
+            var topic = await db.CommunityTopics.FindAsync(topicId);
+            if (topic is null) return Results.NotFound();
+
+            var name = request.Name?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(name) || name.Length > 80)
+            {
+                return Results.BadRequest(new { message = "Topic name is required and must be 80 characters or less." });
+            }
+
+            // Slug stays immutable after creation so existing links keep working.
+            topic.Name = name;
+            topic.Description = NormalizeTopicDescription(request.Description);
+            topic.IsActive = request.IsActive;
+            await db.SaveChangesAsync();
+            return Results.Ok(new CommunityTopicDto(topic.Id, topic.Name, topic.Slug, topic.Description, topic.IsActive));
+        });
+
+        admin.MapDelete("/topics/{topicId:guid}", async (Guid topicId, WithinDbContext db) =>
+        {
+            var topic = await db.CommunityTopics.FindAsync(topicId);
+            if (topic is null) return Results.NotFound();
+            topic.IsActive = false;
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+    }
+
+    private static string? NormalizeTopicDescription(string? value)
+    {
+        var trimmed = value?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) return null;
+        return trimmed.Length > 240 ? trimmed[..240] : trimmed;
+    }
+
+    private static async Task<string> UniqueTopicSlug(WithinDbContext db, string name)
+    {
+        var baseSlug = Slugs.From(name);
+        if (string.IsNullOrWhiteSpace(baseSlug)) baseSlug = $"topic-{Guid.NewGuid():N}"[..16];
+        if (baseSlug.Length > 78) baseSlug = baseSlug[..78];
+
+        var slug = baseSlug;
+        var suffix = 2;
+        while (await db.CommunityTopics.AnyAsync(item => item.Slug == slug))
+        {
+            slug = $"{baseSlug}-{suffix++}";
+        }
+        return slug;
     }
 
     private static async Task<IResult> SetHelpful(WithinDbContext db, Guid userId, Guid? postId, Guid? commentId)

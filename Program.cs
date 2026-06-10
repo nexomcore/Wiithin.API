@@ -101,9 +101,9 @@ var app = builder.Build();
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<WithinDbContext>();
         await db.Database.MigrateAsync();
-        await CommunityTopicSeedData.EnsureSeededAsync(db);
-        await CircleSeedData.EnsureSeededAsync(db);
-        await HabitTemplateSeedData.EnsureSeededAsync(db);
+        // Master data (community topics, platform circles, habit templates) is managed
+        // from the admin portal, not seeded on startup. See AdminEndpoints / CircleEndpoints /
+        // HabitEndpoints / CommunityEndpoints for the admin CRUD surface.
 }
 
 app.UseSwagger();

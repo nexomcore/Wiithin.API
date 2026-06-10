@@ -8,6 +8,30 @@ public sealed record HabitTemplateDto(
     string? IconKey,
     int SortOrder);
 
+public sealed record AdminHabitTemplateDto(
+    string Id,
+    string Name,
+    string Category,
+    string? Description,
+    string? IconKey,
+    int SortOrder,
+    bool IsActive);
+
+public sealed record CreateHabitTemplateRequest(
+    string Name,
+    string Category,
+    string? Description = null,
+    string? IconKey = null,
+    int? SortOrder = null);
+
+public sealed record UpdateHabitTemplateRequest(
+    string Name,
+    string Category,
+    string? Description,
+    string? IconKey,
+    int SortOrder,
+    bool IsActive);
+
 public sealed record UserHabitDto(
     string Id,
     string? HabitTemplateId,

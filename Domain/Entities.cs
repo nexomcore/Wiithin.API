@@ -1135,8 +1135,10 @@ public sealed class UserWellbeingProfile
     public bool UsePseudonym { get; set; }
     public string? Pseudonym { get; set; }
     public DateOnly? DateOfBirth { get; set; }
+    public int? Age { get; set; }
     public string? AgeRange { get; set; }
     public string? Gender { get; set; }
+    public string? LocationCountry { get; set; }
     public string? LocationCity { get; set; }
     public string? LocationSuburb { get; set; }
     public string? ProfilePhotoUrl { get; set; }

@@ -63,6 +63,11 @@ public static class WellbeingEndpoints
                 return Results.BadRequest(new { message = "Date of birth must use yyyy-MM-dd format." });
             }
 
+            if (request.Age is < 13 or > 120)
+            {
+                return Results.BadRequest(new { message = "Age must be between 13 and 120." });
+            }
+
             var selectedInterests = new List<WellbeingInterestOptionDto>();
             foreach (var key in request.InterestKeys.Distinct(StringComparer.OrdinalIgnoreCase))
             {
@@ -96,9 +101,11 @@ public static class WellbeingEndpoints
             profile.UsePseudonym = request.UsePseudonym;
             profile.Pseudonym = NormalizeNullable(request.Pseudonym);
             profile.DateOfBirth = dateOfBirth;
+            profile.Age = request.Age;
             profile.AgeRange = NormalizeNullable(request.AgeRange);
             profile.Gender = NormalizeNullable(request.Gender);
-            profile.LocationCity = NormalizeNullable(request.LocationCity);
+            profile.LocationCountry = "Australia";
+            profile.LocationCity = NormalizeNullable(request.LocationCity) ?? "Perth";
             profile.LocationSuburb = NormalizeNullable(request.LocationSuburb);
             profile.ProfilePhotoUrl = NormalizeNullable(request.ProfilePhotoUrl);
             profile.OnboardingCompleted = true;

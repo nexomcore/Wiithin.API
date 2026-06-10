@@ -915,7 +915,155 @@ public static class CircleEndpoints
             return Results.NoContent();
         });
 
+        // Master data: platform circles are created and managed from the admin portal (no seed scripts).
+        admin.MapGet("", async (WithinDbContext db, ClaimsPrincipal principal) =>
+        {
+            var circles = await db.Circles
+                .Where(item => item.Type == CircleType.Platform)
+                .OrderBy(item => item.Name)
+                .ToArrayAsync();
+            return Results.Ok(await ToCircleDtos(db, circles, principal.UserId()));
+        });
+
+        admin.MapPost("", async (AdminCircleCreateDto request, WithinDbContext db, ClaimsPrincipal principal) =>
+        {
+            var userId = principal.UserId();
+            var validation = ValidateCircle(request.Name, request.Description);
+            if (validation is not null) return Results.BadRequest(new { message = validation });
+            if (request.Visibility == CircleVisibility.Hidden) return Results.BadRequest(new { message = "Hidden invite-only circles are not enabled yet." });
+
+            var now = DateTimeOffset.UtcNow;
+            var circle = new Circle
+            {
+                Id = Guid.NewGuid(),
+                Name = request.Name.Trim(),
+                Slug = await UniqueSlug(db, request.Name),
+                Description = request.Description.Trim(),
+                Rules = NormalizeOptional(request.Rules, 2000),
+                CreatedByUserId = userId,
+                Type = CircleType.Platform,
+                Visibility = request.Visibility,
+                PrivacyType = request.Visibility == CircleVisibility.Private ? CirclePrivacyType.ApprovalRequired : CirclePrivacyType.Open,
+                Status = CircleStatus.Active,
+                Lens = request.Lens,
+                CreatedAt = now
+            };
+            db.Circles.Add(circle);
+            db.CircleMembers.Add(new CircleMember
+            {
+                Id = Guid.NewGuid(),
+                CircleId = circle.Id,
+                UserId = userId,
+                Role = CircleMemberRole.Admin,
+                Status = CircleMemberStatus.Active,
+                JoinedAt = now,
+                UpdatedAt = now
+            });
+            db.CircleRoles.Add(new CircleRole
+            {
+                Id = Guid.NewGuid(),
+                CircleId = circle.Id,
+                UserId = userId,
+                Role = CircleRoleKind.Admin,
+                AssignedByUserId = userId,
+                AssignedAt = now
+            });
+            await db.SaveChangesAsync();
+            return Results.Created($"/api/admin/circles/{circle.Id}", await ToCircleDto(db, circle, userId));
+        });
+
+        admin.MapPut("/{circleId:guid}", async (Guid circleId, AdminCircleUpdateDto request, WithinDbContext db, ClaimsPrincipal principal) =>
+        {
+            var circle = await db.Circles.FindAsync(circleId);
+            if (circle is null) return Results.NotFound();
+            var validation = ValidateCircle(request.Name, request.Description);
+            if (validation is not null) return Results.BadRequest(new { message = validation });
+            if (request.Visibility == CircleVisibility.Hidden) return Results.BadRequest(new { message = "Hidden invite-only circles are not enabled yet." });
+
+            circle.Name = request.Name.Trim();
+            circle.Description = request.Description.Trim();
+            circle.Rules = NormalizeOptional(request.Rules, 2000);
+            circle.Lens = request.Lens;
+            circle.Visibility = request.Visibility;
+            circle.PrivacyType = request.Visibility == CircleVisibility.Private ? CirclePrivacyType.ApprovalRequired : CirclePrivacyType.Open;
+            circle.Status = request.Status;
+            await db.SaveChangesAsync();
+            return Results.Ok(await ToCircleDto(db, circle, principal.UserId()));
+        });
+
+        admin.MapDelete("/{circleId:guid}", async (Guid circleId, WithinDbContext db) =>
+        {
+            var circle = await db.Circles.FindAsync(circleId);
+            if (circle is null) return Results.NotFound();
+            circle.Status = CircleStatus.Archived;
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
+        admin.MapGet("/{circleId:guid}/guidelines", async (Guid circleId, WithinDbContext db) =>
+        {
+            if (!await db.Circles.AnyAsync(item => item.Id == circleId)) return Results.NotFound();
+            var guidelines = await db.CircleGuidelines
+                .Where(item => item.CircleId == circleId)
+                .OrderBy(item => item.SortOrder)
+                .Select(item => new AdminCircleGuidelineDto(item.Id, item.Title, item.Body, item.SortOrder, item.IsActive))
+                .ToArrayAsync();
+            return Results.Ok(guidelines);
+        });
+
+        admin.MapPost("/{circleId:guid}/guidelines", async (Guid circleId, CircleGuidelineRequest request, WithinDbContext db) =>
+        {
+            if (!await db.Circles.AnyAsync(item => item.Id == circleId)) return Results.NotFound();
+            var validation = ValidateGuideline(request.Title, request.Body);
+            if (validation is not null) return Results.BadRequest(new { message = validation });
+
+            var guideline = new CircleGuideline
+            {
+                Id = Guid.NewGuid(),
+                CircleId = circleId,
+                Title = request.Title.Trim(),
+                Body = request.Body.Trim(),
+                SortOrder = request.SortOrder,
+                IsActive = true
+            };
+            db.CircleGuidelines.Add(guideline);
+            await db.SaveChangesAsync();
+            return Results.Created($"/api/admin/circles/{circleId}/guidelines/{guideline.Id}",
+                new AdminCircleGuidelineDto(guideline.Id, guideline.Title, guideline.Body, guideline.SortOrder, guideline.IsActive));
+        });
+
+        admin.MapPut("/{circleId:guid}/guidelines/{guidelineId:guid}", async (Guid circleId, Guid guidelineId, CircleGuidelineUpdateRequest request, WithinDbContext db) =>
+        {
+            var guideline = await db.CircleGuidelines.FirstOrDefaultAsync(item => item.Id == guidelineId && item.CircleId == circleId);
+            if (guideline is null) return Results.NotFound();
+            var validation = ValidateGuideline(request.Title, request.Body);
+            if (validation is not null) return Results.BadRequest(new { message = validation });
+
+            guideline.Title = request.Title.Trim();
+            guideline.Body = request.Body.Trim();
+            guideline.SortOrder = request.SortOrder;
+            guideline.IsActive = request.IsActive;
+            await db.SaveChangesAsync();
+            return Results.Ok(new AdminCircleGuidelineDto(guideline.Id, guideline.Title, guideline.Body, guideline.SortOrder, guideline.IsActive));
+        });
+
+        admin.MapDelete("/{circleId:guid}/guidelines/{guidelineId:guid}", async (Guid circleId, Guid guidelineId, WithinDbContext db) =>
+        {
+            var guideline = await db.CircleGuidelines.FirstOrDefaultAsync(item => item.Id == guidelineId && item.CircleId == circleId);
+            if (guideline is null) return Results.NotFound();
+            db.CircleGuidelines.Remove(guideline);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
         return app;
+    }
+
+    private static string? ValidateGuideline(string title, string body)
+    {
+        if (string.IsNullOrWhiteSpace(title) || title.Trim().Length > 120) return "Guideline title is required and must be 120 characters or less.";
+        if (string.IsNullOrWhiteSpace(body) || body.Trim().Length > 1000) return "Guideline body is required and must be 1000 characters or less.";
+        return null;
     }
 
     private static string? ValidateThread(string title, string body)

@@ -58,8 +58,10 @@ public static class ApiMapping
         UsePseudonym = profile.UsePseudonym,
         Pseudonym = profile.Pseudonym,
         DateOfBirth = profile.DateOfBirth?.ToString("yyyy-MM-dd"),
+        Age = profile.Age,
         AgeRange = profile.AgeRange,
         Gender = profile.Gender,
+        LocationCountry = profile.LocationCountry,
         LocationCity = profile.LocationCity,
         LocationSuburb = profile.LocationSuburb,
         ProfilePhotoUrl = profile.ProfilePhotoUrl,
@@ -412,11 +414,18 @@ public static class ApiMapping
             db.Comments.Count(comment => comment.PostId == post.Id && !comment.IsHidden),
             post.CreatedUtc);
 
-    public static IQueryable<CommentDto> ProjectComments(IQueryable<Comment> query, WithinDbContext db) =>
+    public static IQueryable<CommentDto> ProjectComments(IQueryable<Comment> query, WithinDbContext db, Guid? userId = null) =>
         from comment in query
         join user in db.Users on comment.AuthorUserId equals user.Id
         orderby comment.CreatedUtc
-        select new CommentDto(comment.Id, comment.ParentCommentId, user.DisplayName, comment.Body, comment.CreatedUtc);
+        select new CommentDto(
+            comment.Id,
+            comment.ParentCommentId,
+            user.DisplayName,
+            comment.Body,
+            comment.CreatedUtc,
+            db.Reactions.Count(reaction => reaction.CommentId == comment.Id && reaction.Kind == "like"),
+            userId != null && db.Reactions.Any(reaction => reaction.CommentId == comment.Id && reaction.UserId == userId && reaction.Kind == "like"));
 
     private static string[] NormalizeList(string[]? values) =>
         values is null
