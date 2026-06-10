@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WithinAPI.Application;
 using WithinAPI.Data;
@@ -43,6 +44,26 @@ public static class UserEndpoints
             }
 
             return Results.Ok(response.ToArray());
+        });
+
+        // Self-service account deletion. Requires the current password (re-authentication).
+        users.MapDelete("/me", async ([FromBody] DeleteAccountRequest request, WithinDbContext db, AccountDeletionService deletion, ClaimsPrincipal principal) =>
+        {
+            var userId = principal.UserId();
+            var user = await db.Users.FirstOrDefaultAsync(item => item.Id == userId);
+            if (user is null || user.IsDeleted) return Results.NotFound();
+            if (string.IsNullOrEmpty(request.Password) || !Passwords.Verify(request.Password, user.PasswordHash))
+            {
+                return Results.Json(new { message = "Password is incorrect." }, statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            var result = await deletion.DeleteAccountAsync(userId);
+            return result.Status switch
+            {
+                AccountDeletionStatus.Deleted => Results.NoContent(),
+                AccountDeletionStatus.Blocked => Results.Json(new { message = result.Message }, statusCode: StatusCodes.Status409Conflict),
+                _ => Results.NotFound()
+            };
         });
 
         return app;

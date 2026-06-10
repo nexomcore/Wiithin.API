@@ -4,10 +4,11 @@
 -- Seeds the SINGLE bootstrap admin user for a fresh database. That is
 -- the only data this script inserts.
 --
--- All master data (community topics, platform circles, habit templates)
--- is created and managed from the admin portal at runtime -- there are
--- no master-data seed scripts and no startup auto-seeders. After running
--- this, sign into the portal as the admin below and add master data there.
+-- Most master data (community topics, platform circles) is created and
+-- managed from the admin portal at runtime; there are no startup
+-- auto-seeders. Habit templates can optionally be bulk-loaded with
+-- 03_seed_habit_templates.sql. After running this, sign into the portal
+-- as the admin below to add or edit the rest.
 --
 -- Idempotent: safe to re-run (ON CONFLICT on the unique Email).
 --

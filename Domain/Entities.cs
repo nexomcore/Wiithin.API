@@ -385,6 +385,8 @@ public sealed class User
     public WithinRole Role { get; set; }
     public WithinLens PreferredLens { get; set; } = WithinLens.Feel;
     public DateTimeOffset CreatedUtc { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset? DeletedUtc { get; set; }
 
     public static User Seed(Guid id, string name, string email, WithinRole role, DateTimeOffset createdUtc) => new()
     {

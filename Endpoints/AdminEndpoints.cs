@@ -17,7 +17,7 @@ public static class AdminEndpoints
         {
             var email = request.Email.Trim().ToLowerInvariant();
             var user = await db.Users.FirstOrDefaultAsync(item => item.Email == email);
-            if (user is null || !Passwords.Verify(request.Password, user.PasswordHash))
+            if (user is null || user.IsDeleted || !Passwords.Verify(request.Password, user.PasswordHash))
             {
                 return Results.Unauthorized();
             }
@@ -47,6 +47,28 @@ public static class AdminEndpoints
 
         admin.MapDelete("/submissions/{id:guid}", async (Guid id, IMarketFitSubmissionService service, CancellationToken cancellationToken) =>
             await service.DeleteSubmissionAsync(id, cancellationToken) ? Results.NoContent() : Results.NotFound()).RequireAuthorization("AdminOnly");
+
+        admin.MapDelete("/users/{id:guid}", async (Guid id, WithinDbContext db, AccountDeletionService deletion) =>
+        {
+            var user = await db.Users.FirstOrDefaultAsync(item => item.Id == id);
+            if (user is null || user.IsDeleted) return Results.NotFound();
+            if (user.Role == WithinRole.Admin)
+            {
+                var activeAdmins = await db.Users.CountAsync(item => item.Role == WithinRole.Admin && !item.IsDeleted);
+                if (activeAdmins <= 1)
+                {
+                    return Results.Json(new { message = "Cannot delete the last remaining admin account." }, statusCode: StatusCodes.Status409Conflict);
+                }
+            }
+
+            var result = await deletion.DeleteAccountAsync(id);
+            return result.Status switch
+            {
+                AccountDeletionStatus.Deleted => Results.NoContent(),
+                AccountDeletionStatus.Blocked => Results.Json(new { message = result.Message }, statusCode: StatusCodes.Status409Conflict),
+                _ => Results.NotFound()
+            };
+        }).RequireAuthorization("AdminOnly");
 
         return app;
     }

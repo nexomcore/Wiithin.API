@@ -3,9 +3,11 @@ using System.Text.Json;
 
 namespace WithinAPI.Models;
 
-public sealed record RegisterDto(string DisplayName, string Email, string Password, WithinRole Role = WithinRole.User);
+public sealed record RegisterDto(string Email, string Password, string? DisplayName = null, WithinRole Role = WithinRole.User);
 
 public sealed record LoginDto(string Email, string Password);
+
+public sealed record DeleteAccountRequest(string Password);
 
 public sealed record TokenResponseDto(string AccessToken, string RefreshToken, UserSummaryDto User);
 

@@ -23,7 +23,7 @@ public static class AuthEndpoints
             var user = new User
             {
                 Id = Guid.NewGuid(),
-                DisplayName = request.DisplayName.Trim(),
+                DisplayName = ResolveInitialDisplayName(request.DisplayName, email),
                 Email = email,
                 PasswordHash = Passwords.Hash(request.Password),
                 Role = request.Role,
@@ -39,7 +39,7 @@ public static class AuthEndpoints
         {
             var email = request.Email.Trim().ToLowerInvariant();
             var user = await db.Users.FirstOrDefaultAsync(item => item.Email == email);
-            if (user is null || !Passwords.Verify(request.Password, user.PasswordHash))
+            if (user is null || user.IsDeleted || !Passwords.Verify(request.Password, user.PasswordHash))
             {
                 return Results.Unauthorized();
             }
@@ -48,5 +48,15 @@ public static class AuthEndpoints
         });
 
         return app;
+    }
+
+    // Signup collects only email + password; the user sets their real names during onboarding.
+    // Until then, default the display name to the email's local part so it is never blank.
+    private static string ResolveInitialDisplayName(string? displayName, string email)
+    {
+        var trimmed = displayName?.Trim();
+        if (!string.IsNullOrWhiteSpace(trimmed)) return trimmed;
+        var localPart = email.Split('@')[0].Trim();
+        return string.IsNullOrWhiteSpace(localPart) ? "New member" : localPart;
     }
 }
