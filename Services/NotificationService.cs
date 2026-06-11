@@ -186,6 +186,20 @@ public sealed class NotificationService(WithinDbContext db)
             EventId: eventId));
     }
 
+    public async Task NotifyCircleJoinApproved(Guid circleId, Guid memberUserId, Guid approvedByUserId)
+    {
+        var circleName = await db.Circles.Where(item => item.Id == circleId).Select(item => item.Name).FirstOrDefaultAsync() ?? "Circle";
+        await CreateAsync(new NotificationCreateRequest(
+            memberUserId,
+            NotificationKind.CircleJoinApproved,
+            "Circle request approved",
+            $"You've been approved to join {circleName}. Tap to open the circle.",
+            NotificationTargetType.Circle,
+            circleId,
+            approvedByUserId,
+            CircleId: circleId));
+    }
+
     public async Task NotifyCircleJoinRequest(Guid circleId, Guid requesterUserId)
     {
         var circleName = await db.Circles.Where(item => item.Id == circleId).Select(item => item.Name).FirstOrDefaultAsync() ?? "Circle";

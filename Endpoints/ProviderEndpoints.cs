@@ -322,7 +322,8 @@ public static class ProviderEndpoints
                 userId != null && db.CircleMembers.Any(member => member.CircleId == circle.Id && member.UserId == userId && member.Status == CircleMemberStatus.Pending),
                 userId == null ? null : db.CircleMembers.Where(member => member.CircleId == circle.Id && member.UserId == userId && member.Status == CircleMemberStatus.Active).Select(member => (CircleMemberRole?)member.Role).FirstOrDefault(),
                 userId != null && db.CircleMembers.Any(member => member.CircleId == circle.Id && member.UserId == userId && member.Status == CircleMemberStatus.Active && member.Role == CircleMemberRole.Admin),
-                circle.AllowAnonymousPosts))
+                circle.AllowAnonymousPosts,
+                circle.RequiresApproval))
             .ToArrayAsync();
         return new ProviderDetailDto(provider.ToDto(services.Length), services, events, communities, circles);
     }

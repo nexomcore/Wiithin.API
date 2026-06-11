@@ -96,7 +96,8 @@ public static class CircleEndpoints
             circle.Rules = NormalizeOptional(request.Rules, 2000);
             circle.Lens = request.Lens;
             circle.Visibility = request.Visibility;
-            circle.PrivacyType = request.Visibility == CircleVisibility.Private ? CirclePrivacyType.ApprovalRequired : CirclePrivacyType.Open;
+            // Approval is managed from the admin portal (RequiresApproval); keep PrivacyType aligned with it.
+            circle.PrivacyType = circle.RequiresApproval ? CirclePrivacyType.ApprovalRequired : CirclePrivacyType.Open;
             circle.AllowAnonymousPosts = request.AllowAnonymousPosts;
             await db.SaveChangesAsync();
             return Results.Ok(await ToCircleDto(db, circle, principal.UserId()));
@@ -114,6 +115,9 @@ public static class CircleEndpoints
             var member = await db.CircleMembers.FirstOrDefaultAsync(item => item.CircleId == circleId && item.UserId == userId);
             var wasActive = member?.Status == CircleMemberStatus.Active;
             var now = DateTimeOffset.UtcNow;
+            // Approval is an explicit per-circle setting controlled from the admin portal.
+            var requiresApproval = circle.RequiresApproval;
+            var joinStatus = requiresApproval ? CircleMemberStatus.Pending : CircleMemberStatus.Active;
             if (member is null)
             {
                 member = new CircleMember
@@ -122,7 +126,7 @@ public static class CircleEndpoints
                     CircleId = circleId,
                     UserId = userId,
                     Role = CircleMemberRole.Member,
-                    Status = circle.Visibility == CircleVisibility.Private ? CircleMemberStatus.Pending : CircleMemberStatus.Active,
+                    Status = joinStatus,
                     JoinedAt = now,
                     UpdatedAt = now
                 };
@@ -130,13 +134,14 @@ public static class CircleEndpoints
             }
             else
             {
-                member.Status = circle.Visibility == CircleVisibility.Private ? CircleMemberStatus.Pending : CircleMemberStatus.Active;
+                // Already-active members keep access even if approval was switched on later.
+                if (!(wasActive && requiresApproval)) member.Status = joinStatus;
                 member.LeftAt = null;
                 if (member.JoinedAt == default) member.JoinedAt = now;
                 member.UpdatedAt = now;
             }
 
-            if (circle.Visibility == CircleVisibility.Private)
+            if (requiresApproval && member.Status == CircleMemberStatus.Pending)
             {
                 var request = await db.CircleJoinRequests.FirstOrDefaultAsync(item => item.CircleId == circleId && item.UserId == userId);
                 if (request is null)
@@ -159,7 +164,7 @@ public static class CircleEndpoints
                 await AddWelcomePost(db, circle, userId, now);
             }
             await db.SaveChangesAsync();
-            if (circle.Visibility == CircleVisibility.Private)
+            if (requiresApproval && member.Status == CircleMemberStatus.Pending)
             {
                 await notifications.NotifyCircleJoinRequest(circleId, userId);
             }
@@ -274,11 +279,11 @@ public static class CircleEndpoints
             return Results.Ok(await ToJoinRequestDtos(db, requests));
         }).RequireAuthorization();
 
-        circles.MapPost("/{circleId:guid}/join-requests/{requestId:guid}/approve", async (Guid circleId, Guid requestId, WithinDbContext db, ClaimsPrincipal principal) =>
-            await ReviewJoinRequest(db, principal, circleId, requestId, CircleJoinRequestStatus.Approved)).RequireAuthorization();
+        circles.MapPost("/{circleId:guid}/join-requests/{requestId:guid}/approve", async (Guid circleId, Guid requestId, WithinDbContext db, NotificationService notifications, ClaimsPrincipal principal) =>
+            await ReviewJoinRequest(db, notifications, principal, circleId, requestId, CircleJoinRequestStatus.Approved)).RequireAuthorization();
 
-        circles.MapPost("/{circleId:guid}/join-requests/{requestId:guid}/reject", async (Guid circleId, Guid requestId, WithinDbContext db, ClaimsPrincipal principal) =>
-            await ReviewJoinRequest(db, principal, circleId, requestId, CircleJoinRequestStatus.Rejected)).RequireAuthorization();
+        circles.MapPost("/{circleId:guid}/join-requests/{requestId:guid}/reject", async (Guid circleId, Guid requestId, WithinDbContext db, NotificationService notifications, ClaimsPrincipal principal) =>
+            await ReviewJoinRequest(db, notifications, principal, circleId, requestId, CircleJoinRequestStatus.Rejected)).RequireAuthorization();
 
         circles.MapDelete("/{circleId:guid}/members/{memberUserId:guid}", async (Guid circleId, Guid memberUserId, WithinDbContext db, ClaimsPrincipal principal) =>
         {
@@ -878,6 +883,23 @@ public static class CircleEndpoints
             return Results.Ok(await ToCircleDtos(db, circles, principal.UserId()));
         });
 
+        // Pending join approvals across all platform circles — surfaced on the admin portal.
+        admin.MapGet("/join-requests", async (WithinDbContext db) =>
+        {
+            var requests = await db.CircleJoinRequests
+                .Where(item => item.Status == CircleJoinRequestStatus.Pending
+                    && db.Circles.Any(circle => circle.Id == item.CircleId && circle.Type == CircleType.Platform && circle.Status == CircleStatus.Active))
+                .OrderBy(item => item.RequestedAt)
+                .ToArrayAsync();
+            return Results.Ok(await ToJoinRequestDtos(db, requests));
+        });
+
+        admin.MapPost("/{circleId:guid}/join-requests/{requestId:guid}/approve", async (Guid circleId, Guid requestId, WithinDbContext db, NotificationService notifications, ClaimsPrincipal principal) =>
+            await ApplyJoinReview(db, notifications, principal.UserId(), circleId, requestId, CircleJoinRequestStatus.Approved));
+
+        admin.MapPost("/{circleId:guid}/join-requests/{requestId:guid}/reject", async (Guid circleId, Guid requestId, WithinDbContext db, NotificationService notifications, ClaimsPrincipal principal) =>
+            await ApplyJoinReview(db, notifications, principal.UserId(), circleId, requestId, CircleJoinRequestStatus.Rejected));
+
         admin.MapPost("", async (AdminCircleCreateDto request, WithinDbContext db, ClaimsPrincipal principal) =>
         {
             var userId = principal.UserId();
@@ -896,7 +918,8 @@ public static class CircleEndpoints
                 CreatedByUserId = userId,
                 Type = CircleType.Platform,
                 Visibility = request.Visibility,
-                PrivacyType = request.Visibility == CircleVisibility.Private ? CirclePrivacyType.ApprovalRequired : CirclePrivacyType.Open,
+                PrivacyType = request.RequiresApproval ? CirclePrivacyType.ApprovalRequired : CirclePrivacyType.Open,
+                RequiresApproval = request.RequiresApproval,
                 Status = CircleStatus.Active,
                 Lens = request.Lens,
                 CreatedAt = now
@@ -938,7 +961,8 @@ public static class CircleEndpoints
             circle.Rules = NormalizeOptional(request.Rules, 2000);
             circle.Lens = request.Lens;
             circle.Visibility = request.Visibility;
-            circle.PrivacyType = request.Visibility == CircleVisibility.Private ? CirclePrivacyType.ApprovalRequired : CirclePrivacyType.Open;
+            circle.PrivacyType = request.RequiresApproval ? CirclePrivacyType.ApprovalRequired : CirclePrivacyType.Open;
+            circle.RequiresApproval = request.RequiresApproval;
             circle.Status = request.Status;
             await db.SaveChangesAsync();
             return Results.Ok(await ToCircleDto(db, circle, principal.UserId()));
@@ -1198,14 +1222,20 @@ public static class CircleEndpoints
         });
     }
 
-    private static async Task<IResult> ReviewJoinRequest(WithinDbContext db, ClaimsPrincipal principal, Guid circleId, Guid requestId, CircleJoinRequestStatus status)
+    private static async Task<IResult> ReviewJoinRequest(WithinDbContext db, NotificationService notifications, ClaimsPrincipal principal, Guid circleId, Guid requestId, CircleJoinRequestStatus status)
     {
         if (!await CanAdminCircle(db, principal, circleId)) return Results.Forbid();
+        return await ApplyJoinReview(db, notifications, principal.UserId(), circleId, requestId, status);
+    }
+
+    // Shared by the in-circle moderator endpoints and the admin-portal endpoints (the latter are already AdminOnly-gated).
+    private static async Task<IResult> ApplyJoinReview(WithinDbContext db, NotificationService notifications, Guid reviewerUserId, Guid circleId, Guid requestId, CircleJoinRequestStatus status)
+    {
         var request = await db.CircleJoinRequests.FirstOrDefaultAsync(item => item.Id == requestId && item.CircleId == circleId);
         if (request is null) return Results.NotFound();
         var now = DateTimeOffset.UtcNow;
         request.Status = status;
-        request.ReviewedByUserId = principal.UserId();
+        request.ReviewedByUserId = reviewerUserId;
         request.ReviewedAt = now;
 
         var member = await db.CircleMembers.FirstOrDefaultAsync(item => item.CircleId == circleId && item.UserId == request.UserId);
@@ -1230,6 +1260,10 @@ public static class CircleEndpoints
             if (circle is not null) await AddWelcomePost(db, circle, request.UserId, now);
         }
         await db.SaveChangesAsync();
+        if (status == CircleJoinRequestStatus.Approved)
+        {
+            await notifications.NotifyCircleJoinApproved(circleId, request.UserId, reviewerUserId);
+        }
         return Results.NoContent();
     }
 
@@ -1374,7 +1408,8 @@ public static class CircleEndpoints
         currentUserId is not null && await db.CircleMembers.AnyAsync(item => item.CircleId == circle.Id && item.UserId == currentUserId && item.Status == CircleMemberStatus.Pending),
         currentUserId is null ? null : await db.CircleMembers.Where(item => item.CircleId == circle.Id && item.UserId == currentUserId && item.Status == CircleMemberStatus.Active).Select(item => (CircleMemberRole?)item.Role).FirstOrDefaultAsync(),
         currentUserId is not null && await db.CircleMembers.AnyAsync(item => item.CircleId == circle.Id && item.UserId == currentUserId && item.Status == CircleMemberStatus.Active && item.Role == CircleMemberRole.Admin),
-        circle.AllowAnonymousPosts);
+        circle.AllowAnonymousPosts,
+        circle.RequiresApproval);
 
     private static async Task<CircleThreadDto[]> ToThreadDtos(WithinDbContext db, CircleThread[] threads, Guid? currentUserId)
     {

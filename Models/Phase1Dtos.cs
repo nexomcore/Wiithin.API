@@ -418,7 +418,8 @@ public sealed record CircleDto(
     bool IsPendingMember,
     CircleMemberRole? ViewerRole,
     bool CanManage,
-    bool AllowAnonymousPosts);
+    bool AllowAnonymousPosts,
+    bool RequiresApproval);
 
 public sealed record CircleUpdateDto(
     string Name,
@@ -435,7 +436,8 @@ public sealed record AdminCircleCreateDto(
     string Description,
     WithinLens Lens,
     CircleVisibility Visibility = CircleVisibility.Public,
-    string? Rules = null);
+    string? Rules = null,
+    bool RequiresApproval = false);
 
 public sealed record AdminCircleUpdateDto(
     string Name,
@@ -443,7 +445,8 @@ public sealed record AdminCircleUpdateDto(
     WithinLens Lens,
     CircleVisibility Visibility,
     CircleStatus Status,
-    string? Rules = null);
+    string? Rules = null,
+    bool RequiresApproval = false);
 
 public sealed record AdminCircleGuidelineDto(Guid Id, string Title, string Body, int SortOrder, bool IsActive);
 

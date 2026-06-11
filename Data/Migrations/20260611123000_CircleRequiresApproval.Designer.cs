@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WithinAPI.Data;
@@ -11,9 +12,10 @@ using WithinAPI.Data;
 namespace WithinAPI.Data.Migrations
 {
     [DbContext(typeof(WithinDbContext))]
-    partial class WithinDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611123000_CircleRequiresApproval")]
+    partial class CircleRequiresApproval
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2585,3 +2587,4 @@ namespace WithinAPI.Data.Migrations
         }
     }
 }
+

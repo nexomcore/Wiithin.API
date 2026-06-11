@@ -52,7 +52,8 @@ public enum NotificationKind
     UserMention,
     EventReminder,
     CircleJoinRequest,
-    CircleInvite
+    CircleInvite,
+    CircleJoinApproved
 }
 
 public enum NotificationTargetType
@@ -648,6 +649,8 @@ public sealed class Circle
     public CircleVisibility Visibility { get; set; } = CircleVisibility.Public;
     public CircleStatus Status { get; set; } = CircleStatus.Active;
     public CirclePrivacyType PrivacyType { get; set; } = CirclePrivacyType.Open;
+    // When true, joining creates a pending request that an admin must approve before access is granted.
+    public bool RequiresApproval { get; set; }
     public bool AllowPseudonyms { get; set; } = true;
     public bool AllowHiddenProfiles { get; set; } = true;
     public bool AllowAnonymousPosts { get; set; }
