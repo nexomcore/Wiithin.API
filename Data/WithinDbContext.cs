@@ -60,6 +60,26 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<MarketFitSubmission> MarketFitSubmissions => Set<MarketFitSubmission>();
 
+    // ── Move pillar ──
+    public DbSet<MoveProfile> MoveProfiles => Set<MoveProfile>();
+    public DbSet<BodyMetricLog> BodyMetricLogs => Set<BodyMetricLog>();
+    public DbSet<CalculatorResult> CalculatorResults => Set<CalculatorResult>();
+    public DbSet<WorkoutPlan> WorkoutPlans => Set<WorkoutPlan>();
+    public DbSet<WorkoutDay> WorkoutDays => Set<WorkoutDay>();
+    public DbSet<WorkoutExercise> WorkoutExercises => Set<WorkoutExercise>();
+    public DbSet<WorkoutLog> WorkoutLogs => Set<WorkoutLog>();
+    public DbSet<WorkoutExerciseLog> WorkoutExerciseLogs => Set<WorkoutExerciseLog>();
+    public DbSet<DietPlan> DietPlans => Set<DietPlan>();
+    public DbSet<DietMeal> DietMeals => Set<DietMeal>();
+    public DbSet<DietMealItem> DietMealItems => Set<DietMealItem>();
+    public DbSet<DietLog> DietLogs => Set<DietLog>();
+    public DbSet<TrainerClient> TrainerClients => Set<TrainerClient>();
+    public DbSet<TrainerNote> TrainerNotes => Set<TrainerNote>();
+    public DbSet<Challenge> Challenges => Set<Challenge>();
+    public DbSet<ChallengeTask> ChallengeTasks => Set<ChallengeTask>();
+    public DbSet<ChallengeParticipant> ChallengeParticipants => Set<ChallengeParticipant>();
+    public DbSet<ChallengeProgress> ChallengeProgresses => Set<ChallengeProgress>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
@@ -533,6 +553,8 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
             entity.Property(item => item.AnswersJson).HasColumnType("jsonb");
         });
 
+        ConfigureMoveModule(modelBuilder);
+
         modelBuilder.Entity<EventRegistration>()
             .HasIndex(item => new { item.EventId, item.UserId })
             .IsUnique();
@@ -560,5 +582,181 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(item => item.TokenHash)
             .IsUnique();
+    }
+
+    // Move enums are stored as text (HasConversion<string>) so the module's migration is a
+    // plain set of CreateTable calls and never touches the shared Postgres native-enum block.
+    private static void ConfigureMoveModule(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<MoveProfile>(entity =>
+        {
+            entity.HasIndex(item => item.UserId).IsUnique();
+            entity.Property(item => item.HeightCm).HasColumnType("numeric(5,1)");
+            entity.Property(item => item.WeightKg).HasColumnType("numeric(5,1)");
+            entity.Property(item => item.GenderForCalculation).HasMaxLength(40);
+            entity.Property(item => item.ActivityLevel).HasMaxLength(40);
+            entity.Property(item => item.FitnessGoal).HasMaxLength(40);
+            entity.Property(item => item.ExperienceLevel).HasMaxLength(40);
+            entity.Property(item => item.PreferredWorkoutType).HasMaxLength(40);
+            entity.Property(item => item.DietPreference).HasMaxLength(40);
+            entity.Property(item => item.EquipmentAvailable).HasColumnType("text[]").HasDefaultValue(Array.Empty<string>());
+            entity.Property(item => item.InjuriesOrLimitations).HasMaxLength(1000);
+            entity.Property(item => item.FoodAllergies).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<BodyMetricLog>(entity =>
+        {
+            entity.HasIndex(item => new { item.UserId, item.LoggedAt });
+            foreach (var column in new[] { "WeightKg", "BodyFatPercentage", "WaistCm", "HipCm", "ChestCm", "ArmCm", "ThighCm", "Bmi", "Bmr", "Tdee" })
+            {
+                entity.Property(column).HasColumnType("numeric(6,1)");
+            }
+        });
+
+        modelBuilder.Entity<CalculatorResult>(entity =>
+        {
+            entity.HasIndex(item => new { item.UserId, item.CreatedUtc });
+            entity.Property(item => item.CalculatorType).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.InputJson).HasColumnType("jsonb");
+            entity.Property(item => item.ResultJson).HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<WorkoutPlan>(entity =>
+        {
+            entity.HasIndex(item => new { item.AssignedToUserId, item.Status });
+            entity.HasIndex(item => new { item.IsTemplate, item.WorkoutType });
+            entity.Property(item => item.SourceType).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(2000);
+            entity.Property(item => item.Goal).HasMaxLength(120);
+            entity.Property(item => item.WorkoutType).HasMaxLength(40);
+            entity.Property(item => item.ExperienceLevel).HasMaxLength(40);
+        });
+
+        modelBuilder.Entity<WorkoutDay>(entity =>
+        {
+            entity.HasIndex(item => new { item.WorkoutPlanId, item.SortOrder });
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<WorkoutExercise>(entity =>
+        {
+            entity.HasIndex(item => new { item.WorkoutDayId, item.SortOrder });
+            entity.Property(item => item.ExerciseName).HasMaxLength(160);
+            entity.Property(item => item.Reps).HasMaxLength(40);
+            entity.Property(item => item.Weight).HasColumnType("numeric(6,1)");
+            entity.Property(item => item.Tempo).HasMaxLength(40);
+            entity.Property(item => item.Notes).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<WorkoutLog>(entity =>
+        {
+            entity.HasIndex(item => new { item.UserId, item.LogDate });
+            // One completion per user / workout day / date (repeated sessions create a new date).
+            entity.HasIndex(item => new { item.UserId, item.WorkoutDayId, item.LogDate })
+                .IsUnique()
+                .HasFilter("\"WorkoutDayId\" IS NOT NULL");
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Notes).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<WorkoutExerciseLog>(entity =>
+        {
+            entity.HasIndex(item => item.WorkoutLogId);
+            entity.Property(item => item.ActualReps).HasMaxLength(40);
+            entity.Property(item => item.ActualWeight).HasColumnType("numeric(6,1)");
+            entity.Property(item => item.Notes).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<DietPlan>(entity =>
+        {
+            entity.HasIndex(item => new { item.AssignedToUserId, item.Status });
+            entity.HasIndex(item => new { item.IsTemplate, item.DietPreference });
+            entity.Property(item => item.SourceType).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(2000);
+            entity.Property(item => item.Goal).HasMaxLength(120);
+            entity.Property(item => item.DietPreference).HasMaxLength(40);
+        });
+
+        modelBuilder.Entity<DietMeal>(entity =>
+        {
+            entity.HasIndex(item => new { item.DietPlanId, item.SortOrder });
+            entity.Property(item => item.MealName).HasMaxLength(120);
+            entity.Property(item => item.MealTime).HasMaxLength(40);
+        });
+
+        modelBuilder.Entity<DietMealItem>(entity =>
+        {
+            entity.HasIndex(item => item.DietMealId);
+            entity.Property(item => item.FoodName).HasMaxLength(160);
+            entity.Property(item => item.Quantity).HasMaxLength(60);
+            entity.Property(item => item.Unit).HasMaxLength(40);
+            entity.Property(item => item.SubstitutionNotes).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<DietLog>(entity =>
+        {
+            entity.HasIndex(item => new { item.UserId, item.LogDate });
+            entity.HasIndex(item => new { item.UserId, item.DietMealId, item.LogDate }).IsUnique();
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Notes).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<TrainerClient>(entity =>
+        {
+            entity.HasIndex(item => new { item.TrainerUserId, item.ClientUserId }).IsUnique();
+            entity.HasIndex(item => new { item.ClientUserId, item.Status });
+            entity.HasIndex(item => new { item.TrainerUserId, item.Status });
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<TrainerNote>(entity =>
+        {
+            entity.HasIndex(item => new { item.ClientUserId, item.CreatedUtc });
+            entity.HasIndex(item => new { item.TrainerUserId, item.ClientUserId });
+            entity.Property(item => item.Visibility).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Note).HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<Challenge>(entity =>
+        {
+            entity.HasIndex(item => new { item.Visibility, item.IsTemplate });
+            entity.HasIndex(item => item.CircleId);
+            entity.Property(item => item.ChallengeType).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Visibility).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<ChallengeTask>(entity =>
+        {
+            entity.HasIndex(item => new { item.ChallengeId, item.SortOrder });
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(1000);
+            entity.Property(item => item.TargetValue).HasColumnType("numeric(8,2)");
+            entity.Property(item => item.TargetUnit).HasMaxLength(40);
+        });
+
+        modelBuilder.Entity<ChallengeParticipant>(entity =>
+        {
+            entity.HasIndex(item => new { item.ChallengeId, item.UserId }).IsUnique();
+            entity.HasIndex(item => new { item.UserId, item.Status });
+            entity.Property(item => item.DisplayMode).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<ChallengeProgress>(entity =>
+        {
+            entity.HasIndex(item => new { item.ChallengeId, item.UserId, item.LogDate });
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(item => item.ValueCompleted).HasColumnType("numeric(8,2)");
+            entity.Property(item => item.ProofImageUrl).HasMaxLength(1000);
+            entity.Property(item => item.Notes).HasMaxLength(1000);
+        });
     }
 }

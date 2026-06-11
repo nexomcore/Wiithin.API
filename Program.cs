@@ -106,6 +106,10 @@ var app = builder.Build();
         // Master data (community topics, platform circles, habit templates) is managed
         // from the admin portal, not seeded on startup. See AdminEndpoints / CircleEndpoints /
         // HabitEndpoints / CommunityEndpoints for the admin CRUD surface.
+        //
+        // Move starter content (workout/diet/challenge templates) is required for the pillar
+        // to function out of the box and is seeded idempotently here (keyed on Title).
+        await WithinAPI.Data.MoveSeedData.SeedAsync(db);
 }
 
 app.UseSwagger();

@@ -21,6 +21,7 @@ public static class EndpointRegistrationExtensions
         app.MapNotificationEndpoints();
         app.MapWellbeingEndpoints();
         app.MapHabitEndpoints();
+        app.MapMoveEndpoints();
         return app;
     }
 }
