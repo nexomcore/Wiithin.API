@@ -23,6 +23,7 @@ public static class EndpointRegistrationExtensions
         app.MapHabitEndpoints();
         app.MapMoveEndpoints();
         app.MapProgramEndpoints();
+        app.MapEngagementEndpoints();
         return app;
     }
 }

@@ -134,6 +134,10 @@ public static class ProviderEndpoints
             var provider = await db.Providers.FirstOrDefaultAsync(item => item.Id == id && item.IsActive);
             if (provider is null) return Results.NotFound();
             var userId = principal.TryUserId();
+            if (userId != provider.OwnerUserId)
+            {
+                await EngagementEndpoints.TrackProviderProfileView(db, provider.Id, userId);
+            }
             return Results.Ok(await BuildProviderDetail(db, provider, userId));
         });
 

@@ -66,6 +66,8 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
     public DbSet<AssignedProgram> AssignedPrograms => Set<AssignedProgram>();
     public DbSet<AssignedProgramTask> AssignedProgramTasks => Set<AssignedProgramTask>();
     public DbSet<ClientCheckIn> ClientCheckIns => Set<ClientCheckIn>();
+    public DbSet<ProviderFollow> ProviderFollows => Set<ProviderFollow>();
+    public DbSet<ProviderProfileView> ProviderProfileViews => Set<ProviderProfileView>();
 
     // ── Move pillar ──
     public DbSet<MoveProfile> MoveProfiles => Set<MoveProfile>();
@@ -562,6 +564,7 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
 
         ConfigureMoveModule(modelBuilder);
         ConfigureProgramModule(modelBuilder);
+        ConfigureEngagementModule(modelBuilder);
 
         modelBuilder.Entity<EventRegistration>()
             .HasIndex(item => new { item.EventId, item.UserId })
@@ -590,6 +593,22 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(item => item.TokenHash)
             .IsUnique();
+    }
+
+    private static void ConfigureEngagementModule(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ProviderFollow>(entity =>
+        {
+            entity.HasIndex(item => new { item.ProviderId, item.UserId }).IsUnique();
+            entity.HasIndex(item => new { item.UserId, item.CreatedAt });
+            entity.HasIndex(item => item.ProviderId);
+        });
+
+        modelBuilder.Entity<ProviderProfileView>(entity =>
+        {
+            entity.HasIndex(item => new { item.ProviderId, item.ViewDate });
+            entity.HasIndex(item => new { item.ViewerUserId, item.ViewedAt });
+        });
     }
 
     private static void ConfigureProgramModule(ModelBuilder modelBuilder)

@@ -306,6 +306,41 @@ public sealed class NotificationService(WithinDbContext db)
             RelatedUserId: clientUserId));
     }
 
+    public async Task NotifyProviderNewFollower(Guid providerOwnerUserId, Guid followerUserId, Guid providerId)
+    {
+        var followerName = await UserName(followerUserId);
+        await CreateAsync(new NotificationCreateRequest(
+            providerOwnerUserId,
+            NotificationKind.ProviderNewFollower,
+            "New follower",
+            $"{followerName} followed your provider profile.",
+            NotificationTargetType.Profile,
+            providerId,
+            followerUserId,
+            RelatedUserId: followerUserId));
+    }
+
+    public async Task NotifyProviderFollowersNewEvent(Guid providerId, Guid eventId, string eventTitle, string eventType)
+    {
+        var provider = await db.Providers.FirstOrDefaultAsync(item => item.Id == providerId);
+        if (provider is null) return;
+        var followerIds = await db.ProviderFollows.Where(item => item.ProviderId == providerId).Select(item => item.UserId).ToArrayAsync();
+        var title = eventType.Equals("retreat", StringComparison.OrdinalIgnoreCase) ? "New retreat" : "New event";
+        foreach (var followerId in followerIds)
+        {
+            await CreateAsync(new NotificationCreateRequest(
+                followerId,
+                NotificationKind.ProviderNewEvent,
+                title,
+                $"{provider.Name} created {eventTitle}.",
+                NotificationTargetType.Event,
+                eventId,
+                provider.OwnerUserId,
+                EventId: eventId,
+                RelatedUserId: provider.OwnerUserId));
+        }
+    }
+
     public async Task ScheduleEventReminders(Guid userId, Event evt, EventJoinState state)
     {
         await db.NotificationSchedules

@@ -50,7 +50,7 @@ public static class EventEndpoints
             return item is null ? Results.NotFound() : Results.Ok(item);
         });
 
-        events.MapPost("", async (UpsertEventDto request, WithinDbContext db, ClaimsPrincipal principal) =>
+        events.MapPost("", async (UpsertEventDto request, WithinDbContext db, NotificationService notifications, ClaimsPrincipal principal) =>
         {
             if (!request.TryValidate(out var validationMessage)) return Results.BadRequest(new { message = validationMessage });
 
@@ -64,6 +64,7 @@ public static class EventEndpoints
             var evt = request.ToEntity(provider.Id);
             db.Events.Add(evt);
             await db.SaveChangesAsync();
+            await notifications.NotifyProviderFollowersNewEvent(provider.Id, evt.Id, evt.Title, evt.EventType);
             return Results.Created($"/api/events/{evt.Id}", await ApiMapping.ProjectEvents(db.Events.Where(item => item.Id == evt.Id), db, principal.UserId()).FirstAsync());
         }).RequireAuthorization();
 

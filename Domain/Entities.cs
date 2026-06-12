@@ -71,7 +71,13 @@ public enum NotificationKind
     ProgramTaskDue,
     ProgramCheckInRequested,
     ProgramFeedbackAdded,
-    ProgramCompleted
+    ProgramCompleted,
+    ProviderNewFollower,
+    WeeklyProgressSummary,
+    StreakAtRisk,
+    ReengagementReminder,
+    ProgramOverdue,
+    ChallengeReminder
 }
 
 public enum NotificationTargetType
