@@ -241,6 +241,71 @@ public sealed class NotificationService(WithinDbContext db)
             RelatedUserId: inviterUserId));
     }
 
+    public async Task NotifyProgramAssigned(Guid clientUserId, Guid providerOwnerUserId, Guid assignedProgramId, string programTitle)
+    {
+        var providerName = await UserName(providerOwnerUserId);
+        await CreateAsync(new NotificationCreateRequest(
+            clientUserId,
+            NotificationKind.ProgramAssigned,
+            "New program assigned",
+            $"{providerName} assigned you {programTitle}.",
+            NotificationTargetType.Program,
+            assignedProgramId,
+            providerOwnerUserId,
+            RelatedUserId: providerOwnerUserId));
+    }
+
+    public async Task NotifyProgramUpdated(Guid clientUserId, Guid providerOwnerUserId, Guid assignedProgramId, string programTitle)
+    {
+        await CreateAsync(new NotificationCreateRequest(
+            clientUserId,
+            NotificationKind.ProgramUpdated,
+            "Program updated",
+            $"{programTitle} has been updated.",
+            NotificationTargetType.Program,
+            assignedProgramId,
+            providerOwnerUserId,
+            RelatedUserId: providerOwnerUserId));
+    }
+
+    public async Task NotifyProgramTaskDue(Guid clientUserId, Guid taskId, string taskTitle)
+    {
+        await CreateAsync(new NotificationCreateRequest(
+            clientUserId,
+            NotificationKind.ProgramTaskDue,
+            "Task due today",
+            $"{taskTitle} is due today.",
+            NotificationTargetType.ProgramTask,
+            taskId));
+    }
+
+    public async Task NotifyProgramFeedbackAdded(Guid clientUserId, Guid providerOwnerUserId, Guid targetId, string title)
+    {
+        await CreateAsync(new NotificationCreateRequest(
+            clientUserId,
+            NotificationKind.ProgramFeedbackAdded,
+            "Provider feedback added",
+            title,
+            NotificationTargetType.Program,
+            targetId,
+            providerOwnerUserId,
+            RelatedUserId: providerOwnerUserId));
+    }
+
+    public async Task NotifyProgramCompleted(Guid providerOwnerUserId, Guid clientUserId, Guid assignedProgramId, string programTitle)
+    {
+        var clientName = await UserName(clientUserId);
+        await CreateAsync(new NotificationCreateRequest(
+            providerOwnerUserId,
+            NotificationKind.ProgramCompleted,
+            "Program completed",
+            $"{clientName} completed {programTitle}.",
+            NotificationTargetType.Program,
+            assignedProgramId,
+            clientUserId,
+            RelatedUserId: clientUserId));
+    }
+
     public async Task ScheduleEventReminders(Guid userId, Event evt, EventJoinState state)
     {
         await db.NotificationSchedules

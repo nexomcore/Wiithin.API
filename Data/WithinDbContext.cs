@@ -59,6 +59,13 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
     public DbSet<HabitCompletion> HabitCompletions => Set<HabitCompletion>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<MarketFitSubmission> MarketFitSubmissions => Set<MarketFitSubmission>();
+    public DbSet<ProgramTemplate> ProgramTemplates => Set<ProgramTemplate>();
+    public DbSet<ProgramTemplateWeek> ProgramTemplateWeeks => Set<ProgramTemplateWeek>();
+    public DbSet<ProgramTemplateDay> ProgramTemplateDays => Set<ProgramTemplateDay>();
+    public DbSet<ProgramTemplateTask> ProgramTemplateTasks => Set<ProgramTemplateTask>();
+    public DbSet<AssignedProgram> AssignedPrograms => Set<AssignedProgram>();
+    public DbSet<AssignedProgramTask> AssignedProgramTasks => Set<AssignedProgramTask>();
+    public DbSet<ClientCheckIn> ClientCheckIns => Set<ClientCheckIn>();
 
     // ── Move pillar ──
     public DbSet<MoveProfile> MoveProfiles => Set<MoveProfile>();
@@ -554,6 +561,7 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         });
 
         ConfigureMoveModule(modelBuilder);
+        ConfigureProgramModule(modelBuilder);
 
         modelBuilder.Entity<EventRegistration>()
             .HasIndex(item => new { item.EventId, item.UserId })
@@ -582,6 +590,88 @@ public sealed class WithinDbContext(DbContextOptions<WithinDbContext> options) :
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(item => item.TokenHash)
             .IsUnique();
+    }
+
+    private static void ConfigureProgramModule(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ProgramTemplate>(entity =>
+        {
+            entity.HasIndex(item => new { item.ProviderId, item.CreatedAt });
+            entity.HasIndex(item => new { item.IsPublicTemplate, item.Category });
+            entity.Property(item => item.Category).HasConversion<string>().HasMaxLength(40);
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(2000);
+            entity.Property(item => item.DifficultyLevel).HasMaxLength(40);
+            entity.Property(item => item.Goal).HasMaxLength(160);
+            entity.Property(item => item.IsPublicTemplate).HasDefaultValue(false);
+        });
+
+        modelBuilder.Entity<ProgramTemplateWeek>(entity =>
+        {
+            entity.HasIndex(item => new { item.ProgramTemplateId, item.WeekNumber }).IsUnique();
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<ProgramTemplateDay>(entity =>
+        {
+            entity.HasIndex(item => new { item.ProgramTemplateWeekId, item.DayNumber }).IsUnique();
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<ProgramTemplateTask>(entity =>
+        {
+            entity.HasIndex(item => new { item.ProgramTemplateDayId, item.SortOrder });
+            entity.Property(item => item.TaskType).HasConversion<string>().HasMaxLength(40);
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(1000);
+            entity.Property(item => item.Instructions).HasMaxLength(2000);
+            entity.Property(item => item.Reps).HasMaxLength(40);
+            entity.Property(item => item.Weight).HasColumnType("numeric(8,2)");
+            entity.Property(item => item.Distance).HasColumnType("numeric(8,2)");
+            entity.Property(item => item.AttachmentUrl).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<AssignedProgram>(entity =>
+        {
+            entity.HasIndex(item => new { item.ProviderId, item.Status });
+            entity.HasIndex(item => new { item.ClientUserId, item.Status });
+            entity.HasIndex(item => item.ProgramTemplateId);
+            entity.Property(item => item.Category).HasConversion<string>().HasMaxLength(40);
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(40);
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(2000);
+            entity.Property(item => item.ProviderNotes).HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<AssignedProgramTask>(entity =>
+        {
+            entity.HasIndex(item => new { item.AssignedProgramId, item.ScheduledDate });
+            entity.HasIndex(item => new { item.ScheduledDate, item.Status });
+            entity.Property(item => item.TaskType).HasConversion<string>().HasMaxLength(40);
+            entity.Property(item => item.Status).HasConversion<string>().HasMaxLength(40);
+            entity.Property(item => item.Title).HasMaxLength(160);
+            entity.Property(item => item.Description).HasMaxLength(1000);
+            entity.Property(item => item.Instructions).HasMaxLength(2000);
+            entity.Property(item => item.Reps).HasMaxLength(40);
+            entity.Property(item => item.Weight).HasColumnType("numeric(8,2)");
+            entity.Property(item => item.Distance).HasColumnType("numeric(8,2)");
+            entity.Property(item => item.AttachmentUrl).HasMaxLength(1000);
+            entity.Property(item => item.ClientNotes).HasMaxLength(1000);
+            entity.Property(item => item.ProviderFeedback).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<ClientCheckIn>(entity =>
+        {
+            entity.HasIndex(item => new { item.AssignedProgramId, item.CheckInDate }).IsUnique();
+            entity.HasIndex(item => new { item.ProviderId, item.CheckInDate });
+            entity.HasIndex(item => new { item.ClientUserId, item.CheckInDate });
+            entity.Property(item => item.Weight).HasColumnType("numeric(6,1)");
+            entity.Property(item => item.Mood).HasMaxLength(80);
+            entity.Property(item => item.ClientNotes).HasMaxLength(2000);
+            entity.Property(item => item.ProviderFeedback).HasMaxLength(2000);
+        });
     }
 
     // Move enums are stored as text (HasConversion<string>) so the module's migration is a

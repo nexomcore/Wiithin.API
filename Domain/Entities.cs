@@ -65,7 +65,13 @@ public enum NotificationKind
     EventReminder,
     CircleJoinRequest,
     CircleInvite,
-    CircleJoinApproved
+    CircleJoinApproved,
+    ProgramAssigned,
+    ProgramUpdated,
+    ProgramTaskDue,
+    ProgramCheckInRequested,
+    ProgramFeedbackAdded,
+    ProgramCompleted
 }
 
 public enum NotificationTargetType
@@ -76,7 +82,10 @@ public enum NotificationTargetType
     CommunityPost,
     Profile,
     Connection,
-    Comment
+    Comment,
+    Program,
+    ProgramTask,
+    ProgramCheckIn
 }
 
 public enum NotificationMuteTargetType
